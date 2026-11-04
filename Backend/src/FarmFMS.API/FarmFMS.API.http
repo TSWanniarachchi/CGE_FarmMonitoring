@@ -1,0 +1,5 @@
+@FarmFMS.API_HostAddress = http://localhost:5158
+
+GET {{FarmFMS.API_HostAddress}}/health
+
+###
