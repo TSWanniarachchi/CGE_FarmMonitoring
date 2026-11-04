@@ -1,6 +1,7 @@
 using FarmFMS.Application.Abstractions.Data;
 using FarmFMS.Application.Abstractions.Identity;
 using FarmFMS.Infrastructure.Data;
+using FarmFMS.Infrastructure.HealthChecks;
 using FarmFMS.Infrastructure.Identity;
 using FarmFMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -55,5 +56,18 @@ public static class DependencyInjection
         // Repositories: registered here, grouped by module, as modules are implemented.
 
         return services;
+    }
+
+    /// <summary>
+    /// Registers the readiness checks (SQL Server connectivity), tagged <see cref="HealthCheckTags.Ready"/>.
+    /// </summary>
+    public static IHealthChecksBuilder AddInfrastructureHealthChecks(this IHealthChecksBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        return builder.AddCheck<DatabaseHealthCheck>(
+            DatabaseHealthCheck.Name,
+            tags: [HealthCheckTags.Ready],
+            timeout: TimeSpan.FromSeconds(10));
     }
 }

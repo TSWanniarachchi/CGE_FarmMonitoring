@@ -1,6 +1,8 @@
 using FarmFMS.API;
 using FarmFMS.Application;
 using FarmFMS.Infrastructure;
+using FarmFMS.Infrastructure.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +13,8 @@ builder.Services.AddApi();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddInfrastructureHealthChecks();
 
 var app = builder.Build();
 
@@ -21,7 +24,14 @@ app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {
+    // OpenAPI document (/openapi/v1.json) and Swagger UI (/swagger), which renders that same document.
     app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Farm FMS API v1");
+        options.RoutePrefix = "swagger";
+        options.DocumentTitle = "Farm FMS API";
+    });
 }
 
 app.UseHttpsRedirection();
@@ -30,7 +40,9 @@ app.UseHttpLogging();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/health");
+// Health: liveness (process up, no dependencies) and readiness (SQL Server reachable).
+app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = check => !check.Tags.Contains(HealthCheckTags.Ready) });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains(HealthCheckTags.Ready) });
 
 app.Run();
 

@@ -10,7 +10,8 @@ dotnet build FarmFMS.sln
 dotnet run --project src/FarmFMS.API            # http://localhost:5158, https://localhost:7196
 ```
 
-Health check: `GET /health`. OpenAPI document (Development): `GET /openapi/v1.json`.
+Health: `GET /health` (liveness, no dependencies), `GET /health/ready` (readiness: opens a SQL Server connection; 200 `Healthy` / 503 `Unhealthy`, no details). Development only: OpenAPI document `GET /openapi/v1.json` (built-in `Microsoft.AspNetCore.OpenApi`, XML comments included)
+and Swagger UI `GET /swagger` (`Swashbuckle.AspNetCore.SwaggerUI`, UI only — it renders that same document; no Swashbuckle generator).
 
 ## Projects and dependency rule
 
@@ -58,12 +59,15 @@ Full rules: `../Documentation/Database/Database_Conventions.md`. Decisions: `../
 
 ## Migrations
 
+`dotnet-ef` is a local tool pinned to the EF Core version (`dotnet-tools.json`); run `dotnet tool restore` once.
+
 ```bash
 dotnet ef migrations add <Name> --project src/FarmFMS.Infrastructure --startup-project src/FarmFMS.API
 dotnet ef database update      --project src/FarmFMS.Infrastructure --startup-project src/FarmFMS.API
 ```
 
-Connection string: `ConnectionStrings:FarmFMS` in `src/FarmFMS.API/appsettings.json` (use user-secrets / environment variables for real credentials).
+Connection string: `ConnectionStrings:FarmFMS`. Real credentials go in User Secrets (the API has a `UserSecretsId`):
+`dotnet user-secrets set "ConnectionStrings:FarmFMS" "<value>" --project src/FarmFMS.API`, or env var `ConnectionStrings__FarmFMS`.
 
 ## Foundation (Step 02)
 
