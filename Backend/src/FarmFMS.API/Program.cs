@@ -1,8 +1,7 @@
 using FarmFMS.API;
+using FarmFMS.API.Common.Health;
 using FarmFMS.Application;
 using FarmFMS.Infrastructure;
-using FarmFMS.Infrastructure.HealthChecks;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,8 +40,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 // Health: liveness (process up, no dependencies) and readiness (SQL Server reachable).
-app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = check => !check.Tags.Contains(HealthCheckTags.Ready) });
-app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains(HealthCheckTags.Ready) });
+app.MapHealthEndpoints();
 
 app.Run();
 

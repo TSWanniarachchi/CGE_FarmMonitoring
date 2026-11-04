@@ -55,6 +55,8 @@ public class ApiHostTests(WebApplicationFactory<Program> factory) : IClassFixtur
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Equal("Unhealthy", await response.Content.ReadAsStringAsync());
+        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.True(response.Headers.CacheControl?.NoStore);
     }
 
     private WebApplicationFactory<Program> WithConnectionFactory(IDbConnectionFactory connectionFactory) =>

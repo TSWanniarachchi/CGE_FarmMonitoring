@@ -25,6 +25,23 @@ public class OpenApiTests(WebApplicationFactory<Program> factory) : IClassFixtur
         Assert.True(document.RootElement.TryGetProperty("openapi", out _));
     }
 
+    [Theory]
+    [InlineData("/health")]
+    [InlineData("/health/ready")]
+    public async Task Health_endpoints_are_documented_with_200_and_503_text_responses(string path)
+    {
+        using var client = ClientFor("Development");
+
+        using var document = JsonDocument.Parse(await client.GetStringAsync("/openapi/v1.json"));
+        var get = document.RootElement.GetProperty("paths").GetProperty(path).GetProperty("get");
+
+        Assert.False(string.IsNullOrWhiteSpace(get.GetProperty("summary").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(get.GetProperty("description").GetString()));
+        Assert.Equal("Health", get.GetProperty("tags")[0].GetString());
+        foreach (var status in new[] { "200", "503" })
+            Assert.True(get.GetProperty("responses").GetProperty(status).GetProperty("content").TryGetProperty("text/plain", out _));
+    }
+
     [Fact]
     public async Task Swagger_UI_is_served_in_Development_and_loads_the_OpenApi_document()
     {
