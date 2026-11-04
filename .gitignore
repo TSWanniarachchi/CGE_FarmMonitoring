@@ -480,3 +480,34 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+## ---------------------------------------------------------------
+## Farm FMS: secrets and local configuration
+## ---------------------------------------------------------------
+
+# User Secrets (normally stored under %APPDATA%, guard against copies in the repo)
+secrets.json
+**/UserSecrets/
+
+# Local / machine-specific configuration overrides
+# (committed appsettings.json / appsettings.Development.json must hold placeholders only)
+appsettings.*.local.json
+appsettings.local.json
+*.local.json
+.env.*
+!.env.example
+!.env.template
+
+# Certificates and private keys
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.snk
+
+# Test coverage reports
+coverage/
+coveragereport/
+CoverageReport/
+*.lcov
