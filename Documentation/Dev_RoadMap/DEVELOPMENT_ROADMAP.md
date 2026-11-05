@@ -47,7 +47,7 @@ Do not develop multiple pages in parallel or move ahead while the current featur
 
 | Step | Page / Feature | Main testing focus | Status |
 |---:|---|---|---|
-| 0 | Authentication foundation | Login API, token generation/refresh, session handling, idle timeout, logout, lockout, authorization policies | Not Started |
+| 0 | Authentication foundation | Login API, token generation/refresh, session handling, idle timeout, logout, lockout, authorization policies | In Progress |
 | 1 | Login Page | Input validation, invalid credentials, lockout behaviour, successful login, session handling | Not Started |
 | 2 | Dashboard / Landing Page | Role-based landing experience and access restrictions | Not Started |
 | 3 | User List | Search, filters, paging, sorting, authorized data visibility | Not Started |
@@ -67,7 +67,7 @@ Do not develop multiple pages in parallel or move ahead while the current featur
 ### Module 01 progress
 
 - Completed pages: **0 / 15**
-- Authentication foundation: **Not Started**
+- Authentication foundation: **In Progress** (specification stage, awaiting G0 approval)
 - Current feature: **Authentication foundation**
 - Next feature: **Login Page**, after the foundation is complete and verified.
 
@@ -132,3 +132,5 @@ Use this instruction when starting development:
 | Date | Module | Feature | Status | Notes |
 |---|---|---|---|---|
 | — | Module 01 | Roadmap prepared | Not Started | Implementation has not yet been recorded as started. |
+| 2026-11-05 | Module 01 | Step 0 – Authentication foundation | In Progress | User authorized Step 0. Login-path password encryption items approved (Password_Encryption_Design.md §11.1). Specification first (G0) before database/backend work. |
+| 2026-11-05 | Module 01 | Step 0 – Authentication foundation | In Progress | Draft spec written: `Documentation/Specs/Module01/Step00_Authentication_Foundation_Spec.md` (D-01..D-31, C-01..C-09). Awaiting user G0 approval and decisions. Baseline gates: build 0 warnings, unit 228/228, architecture 138/138. |

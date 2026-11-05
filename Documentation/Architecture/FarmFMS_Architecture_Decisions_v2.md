@@ -260,6 +260,8 @@ Repositories return Domain entities (writes, single-aggregate reads) or Applicat
 - Comparison of the recovered secret is constant-time (`CryptographicOperations.FixedTimeEquals`). Plaintext is never logged and is cleared from buffers where practical.
 
 > **Review note (for the approvers):** AES-256-GCM is reversible encryption, which differs from the usual industry guidance (OWASP/NIST) to store passwords with a slow one-way hash such as Argon2id, BCrypt or PBKDF2. The Module 01 specification records the reason (an authorized Admin must be able to view a user's password) and calls it high-risk. `Documentation/Security/Password_Encryption_Design.md` exists as **Draft – Pending Approval** with 25 open items; key custody and the reversible-password rationale must be explicitly approved before implementation.
+>
+> **2026-11-05 update:** the user approved the login-path items (P-01, P-02, P-03, P-07, P-08 for Development only, P-23) for Module 01 Step 0. See the design document §11.1. All other items remain Pending Approval.
 
 ## AD-12 Tokens (Proposed)
 

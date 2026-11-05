@@ -343,6 +343,14 @@ Interface and class names will be fixed during implementation and aren't part of
 
 ---
 
+## 11.1 Approval record
+
+| Date | Approved by | Scope | Decision |
+|---|---|---|---|
+| 2026-11-05 | User (project owner), in the Claude Code session that started Module 01 Step 0 | **Login path only** (Module 01 Step 0 – Authentication foundation) | P-01: user confirms the risk acceptance is in place. P-02: NFC. P-03: Option A (`AppUser.Id`). P-07: short, opaque, date-based label. P-08: **Development only**, .NET user-secrets with a development-only key (the production secret-store product is still open). P-23: tag-mismatch failures excluded from lockout counting, logged and alerted. |
+
+All other items in §12 (including P-04 and P-14 to P-22, which cover password set, reveal, rotation and audit) remain **Pending Approval** and are decided before the steps that need them (for example Step 4 Create User and Step 13 Password Management).
+
 ## 12. Pending Approval items
 
 | ID | Item | Recommendation |
