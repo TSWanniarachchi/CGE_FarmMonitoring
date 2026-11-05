@@ -3,6 +3,13 @@
 ASP.NET Core Web API (.NET 10), Simple Clean Architecture, Microsoft SQL Server.
 This solution (`FarmFMS.sln`) is fully independent of the Frontend. Never reference Frontend projects.
 
+> **Project rules first:** the root `../CLAUDE.md` defines the source-of-truth order, the hard rules (no commits / pushes,
+> no secrets, no database changes without approval) and the agent team. Backend work is done by `database-engineer`
+> (Persistence configurations / migrations, `Database/` scripts, error catalogue, procedure constants) and
+> `backend-developer` (everything else in `src/`), verified by `qa-engineer` and `code-reviewer`. Use the skills
+> `farmfms-backend-slice` and `farmfms-stored-procedure`. Gates: `python .claude/skills/farmfms-quality-gates/run_gates.py` from the
+> repository root (Release). **Module 01 is not authorized yet**; authentication (Step 04) comes before any admin API.
+
 ## Build / run
 
 ```bash

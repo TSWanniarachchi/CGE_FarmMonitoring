@@ -1,0 +1,71 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git ls-files *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)",
+      "Bash(dotnet list *)",
+      "Bash(python .claude/skills/farmfms-quality-gates/run_gates.py)",
+      "Bash(python .claude/skills/farmfms-quality-gates/run_gates.py *)"
+    ],
+    "ask": [
+      "Bash(dotnet ef database *)",
+      "Bash(dotnet ef migrations bundle *)",
+      "Bash(dotnet ef migrations remove *)",
+      "Bash(sqlcmd *)",
+      "Bash(sqlpackage *)",
+      "Bash(dotnet user-secrets set *)",
+      "Bash(dotnet user-secrets remove *)",
+      "Bash(dotnet user-secrets clear *)"
+    ],
+    "deny": [
+      "Bash(git commit)",
+      "Bash(git commit *)",
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(git filter-branch *)",
+      "Bash(git filter-repo *)",
+      "Bash(git rebase *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)",
+      "Bash(dotnet user-secrets list)",
+      "Bash(dotnet user-secrets list *)",
+      "Bash(printenv)",
+      "Bash(printenv *)",
+      "Read(**/secrets.json)",
+      "Edit(**/secrets.json)",
+      "Read(~/AppData/Roaming/Microsoft/UserSecrets/**)",
+      "Edit(~/AppData/Roaming/Microsoft/UserSecrets/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_bash.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_bash.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -3,6 +3,11 @@
 Blazor Web App (.NET 10), Interactive Server render mode (global), Radzen Blazor + Bootstrap.
 This solution (`FarmFMS.Web.sln`) is fully independent of the Backend.
 
+> **Project rules first:** the root `../CLAUDE.md` defines the source-of-truth order, the hard rules (no commits / pushes,
+> no secrets) and the agent team. Frontend work is done by the `frontend-developer` agent (writes only under `Frontend/`)
+> against a frozen API contract, **only after the frontend foundation (Step 03) is approved**. Build gate:
+> `python .claude/skills/farmfms-quality-gates/run_gates.py --frontend --build-only` from the repository root (Release).
+
 ## Build / run
 
 ```bash
