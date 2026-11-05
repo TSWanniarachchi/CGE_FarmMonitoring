@@ -47,7 +47,7 @@ Each decision records the context, the decision, and its consequences.
 | AD-15 | Errors: RFC 7807 ProblemDetails + global exception handler | Proposed | Implemented |
 | AD-16 | Logging: built-in `ILogger<T>`, no Serilog, no secrets, correlation id | Approved | Implemented |
 | AD-17 | Configuration: validated options, secrets outside source | Proposed | Partly implemented (validated options; user-secrets not set up) |
-| AD-18 | API conventions | Proposed | Partly implemented (built-in OpenAPI, Development only) |
+| AD-18 | API conventions (incl. approved Swagger UI exception) | Proposed; Swagger UI exception Approved | Partly implemented (built-in OpenAPI + Swagger UI, Development only; 201 helper) |
 | AD-19 | Frontend: Blazor Interactive Server, Radzen + Bootstrap split | Mandatory / Proposed | Scaffold only |
 | AD-20 | Frontend HTTP layer: typed clients + `ApiException` funnel | Proposed | Not implemented |
 | AD-21 | Frontend authentication state and server-side token storage | Approved direction | Not implemented |
@@ -327,13 +327,23 @@ Reuse the RouteNexa *pattern*, not its code or keys:
 - Routes: lower-case kebab-case `api/<module>/<resource>` (e.g. `api/setup/farms`); `{id:int}` constraint (primary keys are `INT IDENTITY(1,1)` per the specification).
 - `GET` (all), `GET active`, `GET {id}`, `POST` → `201 CreatedAtAction` with `{ id }`, `PUT {id}` → `204`, deactivate via an explicit endpoint or `IsActive` per spec (RouteNexa disabled hard DELETE).
 - Paging/filtering/sorting for large lists is done **in stored procedures** (parameters), not in memory, where data volume warrants it. Lookup lists keep client-side grid filtering as in RouteNexa.
-- Built-in OpenAPI (`AddOpenApi`/`MapOpenApi`, Development only); no Swashbuckle.
+- Built-in OpenAPI (`AddOpenApi`/`MapOpenApi`, Development only) is the **only** OpenAPI document generator. Swashbuckle is not used for document generation.
+- **Approved exception (M3, approved by the project owner, 2026-11-05):** Swagger UI is provided by `Swashbuckle.AspNetCore.SwaggerUI`, used **only as the UI**.
+  - It renders the built-in document at `/openapi/v1.json`.
+  - It is served at `/swagger`, in Development only, like the document.
+  - No other Swashbuckle package (e.g. `Swashbuckle.AspNetCore.SwaggerGen`, `Swashbuckle.AspNetCore`, `Swashbuckle.AspNetCore.Annotations`) may be referenced.
+  - Replacing the built-in generator with Swashbuckle generation needs a new decision.
 - `CancellationToken` on every action, passed to Dapper.
 
 **Implementation:**
 - `ApiControllerBase.CreatedOrProblem` returns `201 CreatedAtAction` with body `CreatedResponse { id }`.
 - The built-in OpenAPI document is mapped in Development only and includes the documented health endpoints.
-- **Pending decision (M3):** Swagger UI was added at the project's request through `Swashbuckle.AspNetCore.SwaggerUI` (UI only; it renders the built-in document; no Swashbuckle generator). This conflicts with "no Swashbuckle" above, and the owner must either record an exception or remove it. The implementation is unchanged until then.
+- Swagger UI per the approved exception above: `Swashbuckle.AspNetCore.SwaggerUI` 10.3.1 in `FarmFMS.API`, configured in `Program.cs` (`UseSwaggerUI` → `/openapi/v1.json`, route prefix `swagger`, Development only).
+- Verified by tests:
+  - The API references only `Swashbuckle.AspNetCore.SwaggerUI` from Swashbuckle, together with `Microsoft.AspNetCore.OpenApi` (architecture test).
+  - In Development, the built-in document is served and Swagger UI loads it.
+  - Swashbuckle's own generator endpoint (`/swagger/v1/swagger.json`) does not exist.
+  - In Production, neither the document nor the UI is exposed (unit tests).
 
 ## AD-19 Frontend platform (Mandatory / Proposed)
 
@@ -407,7 +417,7 @@ The agreed test scope includes architecture tests, application tests, infrastruc
    - The repository contains the Module 01 specification v0.2. (The PMS naming standard was later removed from the repository; see item 12.)
    - The primary-key type is `INT IDENTITY(1,1)` on all tables (specification).
    - Module 01 object names: all 40 keys, constraints and indexes have full descriptive, unique names (`Database_Conventions.md` §3.3). The earlier blocked-name list was withdrawn with the 15-character limit.
-10. **Pending decision – AD-18 (M3):** keep Swagger UI (`Swashbuckle.AspNetCore.SwaggerUI`, UI only) by recording an exception, or remove it.
+10. **Resolved – AD-18 (M3):** the project owner approved keeping Swagger UI (`Swashbuckle.AspNetCore.SwaggerUI`, UI only, built-in OpenAPI generator retained). It is recorded as an approved exception in AD-18.
 11. **Pending approval – AD-17 (M2):** a SQL credential remains in Git history (commits from `5ffe3f2`); rewriting history and rotating the credential need owner approval. Nothing has been pushed (the remote has no branches).
 12. **Missing input document:** the PMS SQL Server naming standard (`SQL Server Best Practices - Prima Management Services Pvt Ltd.pptx`, listed under Inputs) is no longer in the repository. Restore it, or update the reference.
 

@@ -11,7 +11,8 @@ dotnet run --project src/FarmFMS.API            # http://localhost:5158, https:/
 ```
 
 Health: `GET /health` (liveness, no dependencies), `GET /health/ready` (readiness: opens a SQL Server connection; 200 `Healthy` / 503 `Unhealthy`, no details). Both are anonymous, mapped in `API/Common/Health/HealthEndpoints.cs` over the registered checks, and listed in Swagger (tag `Health`). Development only: OpenAPI document `GET /openapi/v1.json` (built-in `Microsoft.AspNetCore.OpenApi`, XML comments included)
-and Swagger UI `GET /swagger` (`Swashbuckle.AspNetCore.SwaggerUI`, UI only — it renders that same document; no Swashbuckle generator).
+and Swagger UI `GET /swagger` (`Swashbuckle.AspNetCore.SwaggerUI`, UI only — it renders that same document; no Swashbuckle generator;
+approved AD-18 exception, enforced by `OpenApiPackageTests`).
 
 ## Projects and dependency rule
 

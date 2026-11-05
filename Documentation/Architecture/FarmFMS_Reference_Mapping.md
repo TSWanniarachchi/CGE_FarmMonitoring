@@ -35,7 +35,7 @@ Rule for every row: **patterns are re-implemented, not copied**. No RouteNexa en
 - **What:** JWT bearer setup with fail-fast key validation, `MapControllers().RequireAuthorization()`, the `"login"` fixed-window rate limiter, and pipeline order.
 - **Why:** endpoints are secure by default, misconfiguration fails at startup, and brute-force attempts are throttled.
 - **Adapt:** `Backend/src/FarmFMS.API/Program.cs` plus a `FarmFMS.API/Infrastructure/AuthenticationSetup.cs` extension.
-- **Changes:** add `AddProblemDetails`, the exception handler, health checks (already present) and named authorization policies. Use built-in OpenAPI only (no Swashbuckle). No seeding from a configured password. Options are validated with `ValidateOnStart` (AD-12, AD-13, AD-15, AD-17).
+- **Changes:** add `AddProblemDetails`, the exception handler, health checks (already present) and named authorization policies. Use the built-in OpenAPI generator only. Approved AD-18 exception: `Swashbuckle.AspNetCore.SwaggerUI` provides the Swagger UI only and renders the built-in document; no Swashbuckle generator. No seeding from a configured password. Options are validated with `ValidateOnStart` (AD-12, AD-13, AD-15, AD-17).
 
 ### B-04 Stored-Procedure-only Dapper executor
 - **Source:** `RouteNexa.Infrastructure/Persistence/Dapper/DapperExecutor.cs`
@@ -127,7 +127,7 @@ Rule for every row: **patterns are re-implemented, not copied**. No RouteNexa en
 - **Changes:** generalise the single `if` into validated options for every security-relevant section (AD-17).
 
 ### Backend: not carried over
-RouteNexa entities, DTO shapes, schemas (`master`, `auth`, …), table scripts, procedure names, business services (Customer, Depot, Vehicle, Plan, SalesInvoice, …), `AuthSeeder` (startup seeding from config), `PasswordHashService` (BCrypt), `JwtSettings` defaults, every value in `appsettings*.json`, Swashbuckle, ad-hoc error bodies, and per-action try/catch.
+RouteNexa entities, DTO shapes, schemas (`master`, `auth`, …), table scripts, procedure names, business services (Customer, Depot, Vehicle, Plan, SalesInvoice, …), `AuthSeeder` (startup seeding from config), `PasswordHashService` (BCrypt), `JwtSettings` defaults, every value in `appsettings*.json`, Swashbuckle document generation (RouteNexa's Swashbuckle setup; Farm FMS uses only `Swashbuckle.AspNetCore.SwaggerUI` for the UI, per the approved AD-18 exception), ad-hoc error bodies, and per-action try/catch.
 
 ---
 
