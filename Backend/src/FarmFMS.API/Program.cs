@@ -5,15 +5,10 @@ using FarmFMS.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Layers
+// Layers: each registers its own services; Program.cs only composes them and builds the pipeline.
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApi();
-
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks()
-    .AddInfrastructureHealthChecks();
 
 var app = builder.Build();
 

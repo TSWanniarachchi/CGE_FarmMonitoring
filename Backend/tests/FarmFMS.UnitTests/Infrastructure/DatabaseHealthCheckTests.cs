@@ -1,9 +1,13 @@
 using System.Data.Common;
 using FarmFMS.Application.Abstractions.Data;
+using FarmFMS.Infrastructure;
 using FarmFMS.Infrastructure.HealthChecks;
 using FarmFMS.UnitTests.Infrastructure.Fakes;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace FarmFMS.UnitTests.Infrastructure;
 
@@ -48,6 +52,21 @@ public class DatabaseHealthCheckTests
             NullLogger<DatabaseHealthCheck>.Instance);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => check.CheckHealthAsync(Context(check)));
+    }
+
+    [Fact]
+    public void AddInfrastructure_registers_the_database_check_as_a_readiness_check()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:FarmFMS"] = TestEnvironment.PlaceholderConnectionString })
+            .Build();
+        using var provider = new ServiceCollection().AddInfrastructure(configuration).BuildServiceProvider();
+
+        var registration = Assert.Single(
+            provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations,
+            r => r.Name == DatabaseHealthCheck.Name);
+
+        Assert.Equal([HealthCheckTags.Ready], registration.Tags);
     }
 
     private sealed class FailingConnectionFactory(Exception exception) : IDbConnectionFactory

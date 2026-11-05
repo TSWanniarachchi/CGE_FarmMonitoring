@@ -13,7 +13,7 @@
 
 | Source | Used for |
 |---|---|
-| `Documentation/Database/Farm_FMS_Module_01_Database_Specification_v0.2.xlsx` (sheets *Read Me*, *AppUser*, *Stored Procedures*, *Confirmed Decisions*, *Indexes & Rules*) | Password requirement, storage columns, procedure names, password policy, lockout, session rules |
+| `Documentation/06_Database/Farm_FMS_Module_01_Database_Specification_v0.2.xlsx` (sheets *Read Me*, *AppUser*, *Stored Procedures*, *Confirmed Decisions*, *Indexes & Rules*) | Password requirement, storage columns, procedure names, password policy, lockout, session rules |
 | `Documentation/Architecture/FarmFMS_Architecture_Decisions_v2.md` (AD-02, AD-05, AD-09, AD-11, AD-13–AD-17) | Layering, executor, error contract, logging, configuration |
 | `Documentation/Architecture/FarmFMS_Reference_Mapping.md` (B-03, B-14, B-15, F-05) | Authentication and configuration patterns |
 

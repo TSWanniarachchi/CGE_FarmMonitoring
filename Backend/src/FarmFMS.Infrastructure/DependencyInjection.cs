@@ -53,6 +53,10 @@ public static class DependencyInjection
         services.AddScoped<ITransactionAccessor>(sp => sp.GetRequiredService<UnitOfWork>());
         services.AddScoped<IStoredProcedureExecutor, StoredProcedureExecutor>();
 
+        // Health: readiness checks for the resources this layer owns (SQL Server).
+        services.AddHealthChecks()
+            .AddInfrastructureHealthChecks();
+
         // Repositories: registered here, grouped by module, as modules are implemented.
 
         return services;

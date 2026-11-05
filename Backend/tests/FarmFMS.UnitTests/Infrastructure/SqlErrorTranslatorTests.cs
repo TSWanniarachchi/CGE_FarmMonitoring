@@ -8,8 +8,8 @@ public class SqlErrorTranslatorTests
     // Sample catalogue for tests only; the real catalogue has no entries until procedures are approved.
     private static readonly IReadOnlyDictionary<int, Error> SampleCatalog = StoredProcedureErrors.Build(
     [
-        new(50101, Error.Conflict("Sample.Duplicate", "The sample already exists.")),
-        new(50102, Error.NotFound("Sample.NotFound", "The sample was not found."))
+        new(StoredProcedureErrorRange.Module02, 50101, Error.Conflict("Sample.Duplicate", "The sample already exists.")),
+        new(StoredProcedureErrorRange.Module02, 50102, Error.NotFound("Sample.NotFound", "The sample was not found."))
     ]);
 
     [Theory]
@@ -93,14 +93,14 @@ public class SqlErrorTranslatorTests
     public void Catalogue_rejects_numbers_outside_the_business_range(int number)
     {
         Assert.Throws<InvalidOperationException>(() =>
-            StoredProcedureErrors.Build([new(number, Error.Conflict("X.Y", "Message."))]));
+            StoredProcedureErrors.Build([new(StoredProcedureErrorRange.Module01, number, Error.Conflict("X.Y", "Message."))]));
     }
 
     [Fact]
     public void Catalogue_rejects_generic_error_types()
     {
         Assert.Throws<InvalidOperationException>(() =>
-            StoredProcedureErrors.Build([new(50001, Error.Failure("X.Y", "Message."))]));
+            StoredProcedureErrors.Build([new(StoredProcedureErrorRange.Module01, 50001, Error.Failure("X.Y", "Message."))]));
     }
 
     [Fact]
@@ -108,14 +108,14 @@ public class SqlErrorTranslatorTests
     {
         Assert.Throws<InvalidOperationException>(() => StoredProcedureErrors.Build(
         [
-            new(50001, Error.Conflict("X.A", "A.")),
-            new(50001, Error.Conflict("X.B", "B."))
+            new(StoredProcedureErrorRange.Module01, 50001, Error.Conflict("X.A", "A.")),
+            new(StoredProcedureErrorRange.Module01, 50001, Error.Conflict("X.B", "B."))
         ]));
 
         Assert.Throws<InvalidOperationException>(() => StoredProcedureErrors.Build(
         [
-            new(50001, Error.Conflict("X.A", "A.")),
-            new(50002, Error.NotFound("X.A", "B."))
+            new(StoredProcedureErrorRange.Module01, 50001, Error.Conflict("X.A", "A.")),
+            new(StoredProcedureErrorRange.Module01, 50002, Error.NotFound("X.A", "B."))
         ]));
     }
 
@@ -123,7 +123,64 @@ public class SqlErrorTranslatorTests
     public void Catalogue_rejects_missing_messages()
     {
         Assert.Throws<InvalidOperationException>(() =>
-            StoredProcedureErrors.Build([new(50001, Error.Conflict("X.Y", " "))]));
+            StoredProcedureErrors.Build([new(StoredProcedureErrorRange.Module01, 50001, Error.Conflict("X.Y", " "))]));
+    }
+
+    [Fact]
+    public void Ranges_match_the_approved_AD09_allocation()
+    {
+        Assert.Collection(StoredProcedureErrorRange.All,
+            r => Assert.Equal((50001, 50099), (r.First, r.Last)),
+            r => Assert.Equal((50100, 50199), (r.First, r.Last)),
+            r => Assert.Equal((50200, 50299), (r.First, r.Last)),
+            r => Assert.Equal((50300, 50999), (r.First, r.Last)));
+    }
+
+    [Fact]
+    public void Ranges_cover_the_business_range_contiguously_without_overlap()
+    {
+        var ranges = StoredProcedureErrorRange.All;
+
+        Assert.Equal(StoredProcedureErrors.FirstBusinessError, ranges[0].First);
+        Assert.Equal(StoredProcedureErrors.LastBusinessError, ranges[^1].Last);
+        for (var i = 1; i < ranges.Count; i++)
+            Assert.Equal(ranges[i - 1].Last + 1, ranges[i].First);
+    }
+
+    [Fact]
+    public void Catalogue_accepts_the_first_and_last_number_of_every_range()
+    {
+        var entries = StoredProcedureErrorRange.All
+            .SelectMany(range => new[]
+            {
+                new StoredProcedureErrorEntry(range, range.First, Error.Conflict($"R{range.First}.First", "First.")),
+                new StoredProcedureErrorEntry(range, range.Last, Error.Conflict($"R{range.First}.Last", "Last."))
+            });
+
+        var catalog = StoredProcedureErrors.Build(entries);
+
+        Assert.Equal(StoredProcedureErrorRange.All.Count * 2, catalog.Count);
+    }
+
+    [Theory]
+    [InlineData(50100)] // Module 02
+    [InlineData(50200)] // Module 03
+    [InlineData(50300)] // shared / future
+    public void Catalogue_rejects_a_number_outside_its_module_range(int number)
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            StoredProcedureErrors.Build([new(StoredProcedureErrorRange.Module01, number, Error.Conflict("X.Y", "Message."))]));
+
+        Assert.Contains("Module 01", exception.Message);
+    }
+
+    [Fact]
+    public void Catalogue_rejects_ranges_that_are_not_approved()
+    {
+        var unapproved = new StoredProcedureErrorRange("Module 01", 50001, 50999);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            StoredProcedureErrors.Build([new(unapproved, 50500, Error.Conflict("X.Y", "Message."))]));
     }
 
     #endregion

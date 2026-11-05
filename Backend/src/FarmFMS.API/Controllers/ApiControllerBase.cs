@@ -31,6 +31,23 @@ public abstract class ApiControllerBase : ControllerBase
     }
 
     /// <summary>
+    /// Returns 201 Created with <c>{ "id": n }</c> and a <c>Location</c> header pointing at
+    /// <paramref name="actionName"/> (the GET-by-id action, route <c>{id:int}</c>), or a ProblemDetails response
+    /// for a failed result (AD-18). The id is the <c>@NewId</c> of the insert procedure (AD-09).
+    /// </summary>
+    protected ActionResult<CreatedResponse> CreatedOrProblem(Result<int> result, string actionName)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentException.ThrowIfNullOrWhiteSpace(actionName);
+
+        if (result.IsFailure)
+            return ProblemFrom(result.Error);
+
+        var body = new CreatedResponse(result.Value);
+        return CreatedAtAction(actionName, new { id = body.Id }, body);
+    }
+
+    /// <summary>
     /// Returns 204 No Content, or a ProblemDetails response for a failed result.
     /// </summary>
     protected ActionResult NoContentOrProblem(Result result)

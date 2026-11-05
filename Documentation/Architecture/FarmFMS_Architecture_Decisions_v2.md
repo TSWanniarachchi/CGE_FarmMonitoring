@@ -6,7 +6,7 @@
 | Step | 02 – Backend Foundation decisions; reconciled after the Backend Readiness Audit |
 | Status | Per decision (see Index). Step 02 final approval pending. |
 | Date | 2026-11-04 (recorded), 2026-11-04 (naming decisions approved after the readiness audit; reconciliation with the superseded record) |
-| Inputs | `RouteNexa_Backend_Review.md`, `RouteNexa_Frontend_Review.md`, the Farm FMS mandatory architecture, the Farm FMS scaffold, `Documentation/Database/Farm_FMS_Module_01_Database_Specification_v0.2.xlsx`, `Documentation/Database/SQL Server Best Practices - Prima Management Services Pvt Ltd.pptx`, `Documentation/Security/Password_Encryption_Design.md` (Draft – Pending Approval) |
+| Inputs | `RouteNexa_Backend_Review.md`, `RouteNexa_Frontend_Review.md`, the Farm FMS mandatory architecture, the Farm FMS scaffold, `Documentation/06_Database/Farm_FMS_Module_01_Database_Specification_v0.2.xlsx`, `Documentation/Database/SQL Server Best Practices - Prima Management Services Pvt Ltd.pptx`, `Documentation/Security/Password_Encryption_Design.md` (Draft – Pending Approval) |
 
 Each decision records the context, the decision, and its consequences.
 
@@ -22,7 +22,7 @@ Each decision records the context, the decision, and its consequences.
 - **Partly implemented** – some of it is built; the rest is listed.
 - **Not implemented.**
 
-> **Reference documents:** the PMS SQL Server naming standard (slide deck), the Module 01 database specification v0.2 and the password encryption design are under `Documentation/`. Where a concrete table, column, key type, procedure name or encryption field is specified by an approved source document, that source remains authoritative. Do not invent or silently rename approved database objects. Database conventions derived from these decisions: `Documentation/Database/Database_Conventions.md`.
+> **Reference documents:** the PMS SQL Server naming standard (slide deck), the Module 01 database specification v0.2 and the password encryption design are under `Documentation/`. Where a concrete table, column, key type, procedure name or encryption field is specified by an approved source document, that source remains authoritative. Do not invent or silently rename approved database objects. Database conventions derived from these decisions: `Documentation/06_Database/Database_Conventions.md`.
 
 ---
 
@@ -74,7 +74,7 @@ FarmFMS.API             -> Application, Infrastructure
 
 **Decision (clarification vs RouteNexa):** Application contains interfaces, services, DTOs, validation and the result model. It contains **no crypto, JWT, SQL, Dapper or EF packages**. Password encryption, token issuing and key access are Infrastructure implementations of Application interfaces (`IPasswordProtector`, `ITokenService`, `IDbConnectionFactory`).
 Each layer registers its own types in its own `DependencyInjection.cs` (`AddApplication()`, `AddInfrastructure()`, `AddApi()`). `Program.cs` only composes.
-**Implementation:** verified by `LayerDependencyTests` (project files and compiled assemblies).
+**Implementation:** verified by `LayerDependencyTests` (project files and compiled assemblies). Since Step 02.1, `Program.cs` only composes `AddApplication()`, `AddInfrastructure()` and `AddApi()` and builds the pipeline. Controllers, OpenAPI and health checks are registered in `AddApi()`; the database readiness check is registered in `AddInfrastructure()`.
 
 ## AD-03 Folder convention (Proposed)
 
@@ -91,6 +91,8 @@ Unlike RouteNexa (which splits `Features/` and `Interfaces/`), the interface sit
 **Pending:**
 - The implemented API folder is `Common/` (`Common/Errors`, `Common/Identity`), not `Infrastructure/`. This was chosen to avoid a namespace clash with the `FarmFMS.Infrastructure` project. The folder name needs a decision.
 - Application abstractions are in `Abstractions/` (`Abstractions/Data`, `Abstractions/Identity`), following the original scaffold, rather than `Common/Interfaces`.
+- Health checks live in `API/Common/Health` (endpoints) and `Infrastructure/HealthChecks` (database readiness check). Neither folder is in the layout table above.
+- Implemented as in the layout table (Step 02.1): `Domain/Common` (`AuditableEntity`), `Application/Common/Extensions` (string / nullable helpers) and `Application/Common/Dtos` (`AuditableDto`).
 
 ## AD-04 EF Core Code First for schema and migrations only (Mandatory)
 
@@ -130,8 +132,8 @@ Unlike RouteNexa (which splits `Features/` and `Interfaces/`), the interface sit
 - Every `SqlException` passes through `SqlErrorTranslator` (AD-09).
 - Procedure names come from one `static class <Module>Procedures` of dbo-qualified `const string` names.
 
-**Implementation:** implemented and unit-tested (guard, unit of work).
-- **Not implemented:** the AD-09 output-parameter contract (`@NewId`, `@RowsAffected`).
+**Implementation:** implemented and unit-tested (guard, unit of work, output-parameter contract).
+- AD-09 output-parameter contract (Step 02.1): `ExecuteForNewIdAsync` adds `@NewId INT OUTPUT` and returns it; `ExecuteForRowsAffectedAsync` adds `@RowsAffected INT OUTPUT` and returns it. Both reject caller parameters with the reserved names and throw when the procedure leaves the value unset (or `@NewId` ≤ 0, `@RowsAffected` < 0). Names are in `StoredProcedureOutputParameters`. Tested against in-memory fake commands, including enlistment in an active unit of work.
 - **Not verified:** live execution against SQL Server (AD-23).
 
 ## AD-06 Stored Procedures for all CRUD and business operations (Mandatory)
@@ -191,7 +193,7 @@ Each rule is proven against a deliberately invalid sample.
 
 The default schema is `dbo`; Stored Procedure calls must be schema-qualified (AD-24). C# names stay descriptive. EF configurations map database names explicitly (`ToTable`, `HasColumnName`, `HasName`, `HasDatabaseName`, `HasCheckConstraint`, `SetDefaultConstraintName`), and procedure names are constants. DEFAULT constraints are always named explicitly, because SQL Server's generated `DF__…` names are not deterministic.
 
-**Module 01 object names:** the 40 keys, constraints and indexes implied by the specification are reviewed and listed in `Documentation/Database/Database_Conventions.md` §3.3. All 40 use full descriptive names and none collide; these are names only, nothing has been created.
+**Module 01 object names:** the 40 keys, constraints and indexes implied by the specification are reviewed and listed in `Documentation/06_Database/Database_Conventions.md` §3.3. All 40 use full descriptive names and none collide; these are names only, nothing has been created.
 
 **Implementation:**
 - `Infrastructure/Persistence/Naming/DbObjectNames` builds the full descriptive name. Only if it exceeds 128 characters does it apply the approved abbreviations. If it still doesn't fit, it throws; it never truncates.
@@ -239,13 +241,12 @@ Use `THROW` for known business-rule failures and maintain a central error catalo
 | 547 | 409 `Database.ConstraintViolation` |
 | 1205, -2, connectivity | 503 (never retried automatically) |
 
-THROW and SQL message text never reach clients. The catalogue is validated at startup (range, unique numbers and codes, allowed types, message present) and has no entries yet.
+THROW and SQL message text never reach clients. The catalogue is validated at startup (module range, unique numbers and codes, allowed types, message present) and has no entries yet.
 
 **Implementation:**
 - Implemented: error translation and the catalogue.
-- **Not implemented:**
-  - the output-parameter contract (`@NewId`, `@RowsAffected`) in the executor / repository contract;
-  - enforcement of the per-module ranges (the catalogue currently validates only 50001–50999).
+- Implemented (Step 02.1): per-module ranges. `StoredProcedureErrorRange` defines the four approved ranges above. Every catalogue entry names its range, and the catalogue rejects a number outside that range or an unapproved range. Tests check that the ranges match this table and cover 50001–50999 without gaps or overlaps.
+- Implemented (Step 02.1): the output-parameter contract in the executor (AD-05). Repositories are not built yet.
 
 ## AD-10 Repositories return entities or read models (Proposed)
 
@@ -274,7 +275,7 @@ Reuse the RouteNexa *pattern*, not its code or keys:
 - `MapControllers().RequireAuthorization()` (secure by default); `[AllowAnonymous]` only on login, refresh, logout and `/health`.
 - Named policies (`AddAuthorizationBuilder().AddPolicy(...)`) per permission defined in the security requirements, applied with `[Authorize(Policy = …)]`. The frontend mirrors them with `AuthorizeView Policy=…` for UI trimming only; the API remains the enforcement point.
 
-**Implementation:** not implemented. All API endpoints are currently anonymous; there is no authentication middleware.
+**Implementation:** not implemented. All API endpoints are currently anonymous; there is no authentication middleware. The health endpoints (`/health`, `/health/ready`) are already explicitly `AllowAnonymous`.
 
 ## AD-14 Audit identity and time (Approved direction)
 
@@ -297,7 +298,7 @@ Reuse the RouteNexa *pattern*, not its code or keys:
 - Unexpected exceptions → 500 ProblemDetails with `traceId`, no exception message or stack trace.
 - **No try/catch in controllers.** No raw `ex.Message` returned to clients.
 
-**Implementation:** implemented and tested. `ApiControllerBase` exists but has no tests yet (no controllers use it).
+**Implementation:** implemented and tested. `ApiControllerBase` (`OkOrProblem`, `NoContentOrProblem`, `CreatedOrProblem`, `ProblemFrom`) is unit-tested with the MVC `ProblemDetailsFactory`; no business controllers use it yet.
 
 ## AD-16 Logging (Approved)
 
@@ -314,7 +315,12 @@ Reuse the RouteNexa *pattern*, not its code or keys:
 - `appsettings.json` holds non-secret values only. Secrets come from **user-secrets** (Development) and **environment variables / secret store** (other environments). Farm FMS has its own names: `ConnectionStrings:FarmFMS`, `Database`, `SystemUser`, and `Jwt`/`Encryption` sections to be defined.
 - **Nothing is copied from RouteNexa configuration** (its connection string, JWT key and Google Maps keys are committed in plain text and should be considered exposed).
 
-**Implementation:** `DatabaseOptions` and `SystemUserOptions` are validated on start; a missing connection string fails at startup. **Not implemented:** user-secrets for the API project. The readiness-audit findings on connection settings are open and outside this document's scope.
+**Implementation:**
+- `DatabaseOptions` and `SystemUserOptions` are validated on start; a missing or blank connection string fails at startup (tested).
+- User-secrets: the API project has a `UserSecretsId`. The committed `appsettings.json` has an empty `ConnectionStrings:FarmFMS`. The real value comes from user-secrets (Development) or the `ConnectionStrings__FarmFMS` environment variable.
+- An architecture test fails if any committed `appsettings*.json` contains SQL credentials or a non-empty password / secret / key / token value.
+- The unit tests set a placeholder connection string through an environment variable, so they never use a developer's database.
+- **Open:** earlier commits (from `5ffe3f2`) still contain a SQL credential in history. Rewriting history and rotating the credential need owner approval.
 
 ## AD-18 API conventions (Proposed)
 
@@ -323,6 +329,11 @@ Reuse the RouteNexa *pattern*, not its code or keys:
 - Paging/filtering/sorting for large lists is done **in stored procedures** (parameters), not in memory, where data volume warrants it. Lookup lists keep client-side grid filtering as in RouteNexa.
 - Built-in OpenAPI (`AddOpenApi`/`MapOpenApi`, Development only); no Swashbuckle.
 - `CancellationToken` on every action, passed to Dapper.
+
+**Implementation:**
+- `ApiControllerBase.CreatedOrProblem` returns `201 CreatedAtAction` with body `CreatedResponse { id }`.
+- The built-in OpenAPI document is mapped in Development only and includes the documented health endpoints.
+- **Pending decision (M3):** Swagger UI was added at the project's request through `Swashbuckle.AspNetCore.SwaggerUI` (UI only; it renders the built-in document; no Swashbuckle generator). This conflicts with "no Swashbuckle" above, and the owner must either record an exception or remove it. The implementation is unchanged until then.
 
 ## AD-19 Frontend platform (Mandatory / Proposed)
 
@@ -364,7 +375,8 @@ The agreed test scope includes architecture tests, application tests, infrastruc
   - procedure naming against the specification workbook.
 
   Every rule is proven against known-bad samples.
-- `Backend/tests/FarmFMS.UnitTests` (implemented; covers Application and Infrastructure units and the in-memory API host): Result model, procedure names, error translation and catalogue, unit of work, executor guard, audit actor, naming builder, exception handler, current user, options validation.
+- `Backend/tests/FarmFMS.ArchitectureTests` also checks (Step 02.1) that committed `appsettings*.json` files contain no credentials (AD-17).
+- `Backend/tests/FarmFMS.UnitTests` (implemented; covers Application and Infrastructure units and the in-memory API host): Result model, procedure names, error translation and catalogue (including per-module ranges), unit of work, executor guard, output-parameter contract (fake commands), audit actor, audit base types, string / nullable helpers, naming builder, exception handler, `ApiControllerBase`, current user, options validation, health checks, OpenAPI / Swagger UI exposure.
 - `FarmFMS.Infrastructure.IntegrationTests`: **Blocked** (no SQL Server test database). **Live SQL Server behaviour is not verified.**
 - API/frontend contract tests: not implemented.
 
@@ -387,13 +399,16 @@ The agreed test scope includes architecture tests, application tests, infrastruc
    - (b) The specification lists both a unique constraint on `RoleMenuAccess (RoleId, MenuId, PermissionId)` and an index on `RoleMenuAccess (RoleId, MenuId)`. The index repeats the leading columns of the unique constraint's index and may be redundant. This is noted only; the specification is not changed.
 3. **Pending – spec consistency:** the *Relationships* sheet names `UserHierarchy.ManagerAccountId`, while the *UserHierarchy* sheet and the ERD name the column `ManagerId`.
 4. **Blocked – AD-14:** the `SYSTEM` user record and its lookup Stored Procedure are not in the Module 01 specification.
-5. **Not implemented – AD-09:** the output-parameter contract (`@NewId`, `@RowsAffected`) and enforcement of the per-module error ranges.
+5. **Resolved (Step 02.1) – AD-09:** the output-parameter contract (`@NewId`, `@RowsAffected`) and the per-module error ranges are implemented and tested.
 6. **Pending – AD-03:** the API folder name (`Common/` implemented vs `Infrastructure/` documented).
 7. **Pending approval – AD-11:** `Password_Encryption_Design.md`, including key custody and the reversible-password rationale.
 8. **Blocked – AD-23:** a dedicated non-production SQL Server integration-test database. Live Dapper and real `SqlException` behaviour remain unverified.
 9. **Resolved:**
-   - The repository contains the PMS naming standard and the Module 01 specification v0.2.
+   - The repository contains the Module 01 specification v0.2. (The PMS naming standard was later removed from the repository; see item 12.)
    - The primary-key type is `INT IDENTITY(1,1)` on all tables (specification).
    - Module 01 object names: all 40 keys, constraints and indexes have full descriptive, unique names (`Database_Conventions.md` §3.3). The earlier blocked-name list was withdrawn with the 15-character limit.
+10. **Pending decision – AD-18 (M3):** keep Swagger UI (`Swashbuckle.AspNetCore.SwaggerUI`, UI only) by recording an exception, or remove it.
+11. **Pending approval – AD-17 (M2):** a SQL credential remains in Git history (commits from `5ffe3f2`); rewriting history and rotating the credential need owner approval. Nothing has been pushed (the remote has no branches).
+12. **Missing input document:** the PMS SQL Server naming standard (`SQL Server Best Practices - Prima Management Services Pvt Ltd.pptx`, listed under Inputs) is no longer in the repository. Restore it, or update the reference.
 
 **Step gate:** Step 03 (Frontend Foundation) must not start until the updated Step 02 implementation report has been reviewed and Step 02 is explicitly approved.

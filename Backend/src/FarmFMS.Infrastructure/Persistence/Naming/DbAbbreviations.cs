@@ -15,7 +15,7 @@ namespace FarmFMS.Infrastructure.Persistence.Naming;
 /// abbreviation is required by an approved rule (e.g. "Usr" in newly introduced Stored Procedure names) and by
 /// <see cref="DbObjectNames"/> only as a fallback when a full name would exceed SQL Server's 128-character limit.
 /// Table, column and Stored Procedure names defined by the Module 01 specification are used unchanged.
-/// Do not add an entry without an approved decision (see Documentation/Database/Database_Conventions.md).
+/// Do not add an entry without an approved decision (see Documentation/06_Database/Database_Conventions.md).
 /// </para>
 /// </summary>
 public static partial class DbAbbreviations

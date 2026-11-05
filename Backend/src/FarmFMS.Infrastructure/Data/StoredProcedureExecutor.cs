@@ -1,6 +1,7 @@
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Reflection;
 using Dapper;
 using FarmFMS.Application.Abstractions.Data;
 using Microsoft.Data.SqlClient;
@@ -125,6 +126,40 @@ internal sealed class StoredProcedureExecutor : IStoredProcedureExecutor
             cancellationToken);
     }
 
+    public async Task<int> ExecuteForNewIdAsync(
+        string procedureName,
+        object? parameters = null,
+        CancellationToken cancellationToken = default)
+    {
+        var dynamicParameters = WithOutputParameter(parameters, StoredProcedureOutputParameters.NewId);
+
+        await ExecuteAsync(procedureName, dynamicParameters, cancellationToken);
+
+        var newId = dynamicParameters.Get<int?>(StoredProcedureOutputParameters.NewId);
+        if (newId is not > 0)
+            throw new InvalidOperationException(
+                $"Stored procedure {procedureName} did not set @{StoredProcedureOutputParameters.NewId} to a positive Id (AD-09).");
+
+        return newId.Value;
+    }
+
+    public async Task<int> ExecuteForRowsAffectedAsync(
+        string procedureName,
+        object? parameters = null,
+        CancellationToken cancellationToken = default)
+    {
+        var dynamicParameters = WithOutputParameter(parameters, StoredProcedureOutputParameters.RowsAffected);
+
+        await ExecuteAsync(procedureName, dynamicParameters, cancellationToken);
+
+        var rowsAffected = dynamicParameters.Get<int?>(StoredProcedureOutputParameters.RowsAffected);
+        if (rowsAffected is not >= 0)
+            throw new InvalidOperationException(
+                $"Stored procedure {procedureName} did not set @{StoredProcedureOutputParameters.RowsAffected} (AD-09).");
+
+        return rowsAffected.Value;
+    }
+
     public Task<T?> ExecuteScalarAsync<T>(
         string procedureName,
         object? parameters = null,
@@ -207,6 +242,27 @@ internal sealed class StoredProcedureExecutor : IStoredProcedureExecutor
             if (ownedConnection is not null)
                 await ownedConnection.DisposeAsync();
         }
+    }
+
+    /// <summary>
+    /// Returns DynamicParameters carrying the caller's parameters plus the reserved <c>INT OUTPUT</c> parameter.
+    /// A DynamicParameters instance is used as-is (so the caller can also read its own output parameters);
+    /// anything else (e.g. an anonymous object) is wrapped.
+    /// </summary>
+    private static DynamicParameters WithOutputParameter(object? parameters, string outputName)
+    {
+        var dynamicParameters = parameters as DynamicParameters;
+
+        var alreadyUsed = dynamicParameters is not null
+            ? dynamicParameters.ParameterNames.Contains(outputName, StringComparer.OrdinalIgnoreCase)
+            : parameters?.GetType().GetProperty(outputName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase) is not null;
+        if (alreadyUsed)
+            throw new ArgumentException(
+                $"'{outputName}' is a reserved output parameter (AD-09); the executor adds it.", nameof(parameters));
+
+        dynamicParameters ??= new DynamicParameters(parameters);
+        dynamicParameters.Add(outputName, dbType: DbType.Int32, direction: ParameterDirection.Output);
+        return dynamicParameters;
     }
 
     private CommandDefinition BuildCommand(

@@ -9,7 +9,7 @@ namespace FarmFMS.Infrastructure.Data;
 
 /// <summary>
 /// Stored Procedure error contract (Architecture Decision AD-09, documented in
-/// <c>Documentation/Database/Database_Conventions.md</c>):
+/// <c>Documentation/06_Database/Database_Conventions.md</c>):
 /// <list type="table">
 /// <item><term>50000</term><description>Generic / unexpected database error -> HTTP 500, generic message.</description></item>
 /// <item><term>50001-50999</term><description>Known business errors. Each number used by a procedure MUST be registered
@@ -50,13 +50,15 @@ public static class StoredProcedureErrors
     /// <summary>
     /// Registered business errors (error number -> safe application error).
     /// <para>
-    /// Add entries here, grouped by module, only when the raising Stored Procedure is approved.
+    /// Add entries here, grouped by module, only when the raising Stored Procedure is approved. Each entry names its
+    /// module range (<see cref="StoredProcedureErrorRange"/>), e.g.
+    /// <c>new(StoredProcedureErrorRange.Module01, 50001, Error.Conflict("User.UsernameTaken", "..."))</c>.
     /// No business error numbers are registered yet (no Stored Procedures exist).
     /// </para>
     /// </summary>
     public static IReadOnlyDictionary<int, Error> Catalog { get; } = Build(
     [
-        // Module 01 – Security & Access Management
+        // Module 01 – Security & Access Management (50001-50099)
         // (none yet)
     ]);
 
@@ -67,21 +69,32 @@ public static class StoredProcedureErrors
         errorNumber is >= FirstBusinessError and <= LastBusinessError;
 
     /// <summary>
-    /// Builds and validates a catalogue: numbers in range and unique, codes unique, allowed types only, message present.
+    /// Builds and validates a catalogue:
+    /// <list type="bullet">
+    /// <item>each entry names an approved module range (AD-09) and its number falls inside that range;</item>
+    /// <item>numbers and codes are unique, only allowed types are used, and a message is present.</item>
+    /// </list>
     /// Throws at type initialisation, so an invalid catalogue stops the API at startup.
     /// </summary>
-    internal static IReadOnlyDictionary<int, Error> Build(IEnumerable<KeyValuePair<int, Error>> entries)
+    internal static IReadOnlyDictionary<int, Error> Build(IEnumerable<StoredProcedureErrorEntry> entries)
     {
         var catalog = new Dictionary<int, Error>();
         var codes = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var (number, error) in entries)
+        foreach (var entry in entries)
         {
+            ArgumentNullException.ThrowIfNull(entry);
+            var (range, number, error) = entry;
+            ArgumentNullException.ThrowIfNull(range);
             ArgumentNullException.ThrowIfNull(error);
 
-            if (!IsBusinessErrorNumber(number))
+            if (!StoredProcedureErrorRange.All.Contains(range))
                 throw new InvalidOperationException(
-                    $"Business error {number} is outside {FirstBusinessError}-{LastBusinessError}.");
+                    $"Business error {number} is registered under '{range}', which is not an approved range (AD-09).");
+
+            if (!range.Contains(number))
+                throw new InvalidOperationException(
+                    $"Business error {number} is outside the range allocated to {range} (AD-09).");
 
             if (!AllowedTypes.Contains(error.Type))
                 throw new InvalidOperationException(

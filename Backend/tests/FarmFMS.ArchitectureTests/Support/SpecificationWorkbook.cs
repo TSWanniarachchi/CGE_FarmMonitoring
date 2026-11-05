@@ -21,7 +21,7 @@ internal static class SpecificationWorkbook
     private static readonly XNamespace PackageRelationships = "http://schemas.openxmlformats.org/package/2006/relationships";
 
     public static string FilePath =>
-        Path.GetFullPath(Path.Combine(SolutionFiles.BackendRoot, "..", "Documentation", "Database", FileName));
+        Path.GetFullPath(Path.Combine(SolutionFiles.BackendRoot, "..", "Documentation", "06_Database", FileName));
 
     /// <summary>
     /// Values of column A of <paramref name="sheetName"/>, excluding the header row and empty cells.

@@ -63,7 +63,27 @@ public interface IStoredProcedureExecutor
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// WRITE / READ: first column of the first row (e.g. a new ID).
+    /// WRITE (insert): runs the procedure and returns its <c>@NewId</c> output parameter (AD-09).
+    /// The executor adds the <c>INT OUTPUT</c> parameter; the procedure must set it to the new row's <c>Id</c>.
+    /// Throws <see cref="InvalidOperationException"/> when the procedure leaves it unset or not positive.
+    /// </summary>
+    Task<int> ExecuteForNewIdAsync(
+        string procedureName,
+        object? parameters = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// WRITE (update / deactivate / delete): runs the procedure and returns its <c>@RowsAffected</c> output
+    /// parameter (AD-09). <c>0</c> means no row was changed (e.g. not found). The executor adds the
+    /// <c>INT OUTPUT</c> parameter; throws <see cref="InvalidOperationException"/> when it is left unset or negative.
+    /// </summary>
+    Task<int> ExecuteForRowsAffectedAsync(
+        string procedureName,
+        object? parameters = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// WRITE / READ: first column of the first row. For inserts prefer <see cref="ExecuteForNewIdAsync"/>.
     /// </summary>
     Task<T?> ExecuteScalarAsync<T>(
         string procedureName,

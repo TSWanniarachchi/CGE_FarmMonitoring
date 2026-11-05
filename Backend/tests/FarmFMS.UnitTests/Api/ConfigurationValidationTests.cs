@@ -1,6 +1,8 @@
 using FarmFMS.Application.Abstractions.Identity;
+using FarmFMS.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -24,6 +26,21 @@ public class ConfigurationValidationTests
         using var factory = WithSetting(key, value);
 
         Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Missing_connection_string_stops_the_API_at_startup(string? connectionString)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:FarmFMS"] = connectionString })
+            .Build();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddInfrastructure(configuration));
+
+        Assert.Contains("FarmFMS", exception.Message);
     }
 
     [Fact]

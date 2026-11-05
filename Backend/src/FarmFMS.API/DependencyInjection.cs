@@ -5,7 +5,8 @@ using FarmFMS.Application.Abstractions.Identity;
 using Microsoft.AspNetCore.HttpLogging;
 
 /*
- * Description  : Registers the API-layer services (current user, ProblemDetails, exception handling, request logging).
+ * Description  : Registers the API-layer services (controllers, OpenAPI, health checks, current user, ProblemDetails,
+ *                exception handling, request logging).
  * Author       : T.S.Wanniarachchi
  * Created Date : 04-11-2026
  */
@@ -15,6 +16,12 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
+        // Endpoints: controllers, the built-in OpenAPI document (mapped in Development only) and health checks.
+        // The readiness checks themselves are registered by AddInfrastructure().
+        services.AddControllers();
+        services.AddOpenApi();
+        services.AddHealthChecks();
+
         // Current user (audit fields)
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();

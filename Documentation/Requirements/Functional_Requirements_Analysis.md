@@ -32,14 +32,14 @@ All documents in this set cite these source IDs.
 |---|---|---|---|
 | **S1** | *PMS – CGE FMS – Software Requirement Specification.pdf* | v1.0, 15-07-2026 (prepared by the Business Analyst) | **Primary.** Page numbers are the printed page numbers ("p.N"). |
 | **S2** | *PMS – CGE Farm Monitoring System – Project Proposal.pdf* | v1.1, 13-07-2026 | Primary for scope. Where S1 and S2 conflict, the conflict is recorded rather than resolved. |
-| **S3** | `Documentation/Database/Farm_FMS_Module_01_Database_Specification_v0.2.xlsx` | v0.2 | Approved column baseline for **Module 01 (Security & Access) only**. |
+| **S3** | `Documentation/06_Database/Farm_FMS_Module_01_Database_Specification_v0.2.xlsx` | v0.2 | Approved column baseline for **Module 01 (Security & Access) only**. |
 | **S4** | *DataBase Design.xlsx* (legacy feature list "CGE FARM MS" and legacy table list "CGE Farm Tables") | undated | Secondary: evidence of the existing (2008) system and the planned feature list. |
 | **S5** | Figma web prototype (*Farm Management System – web.zip*, 24 screens) | 02-11-2026 export | Secondary. S1 p.16 states the mock-ups are "for illustrative purposes only and may not reflect the final design". |
 | **S6** | Figma mobile prototype (*Farm monitoring System – Mobile.zip*, 15 screens) | 02-11-2026 export | Secondary (same caveat). S1 p.12 references this prototype URL. |
 | **S7** | *Farm_FMS_Requirements_Traceability_Matrix_v0.1.xlsx* (Desktop) | v0.1 first-pass draft | Secondary. It cites "approved user decisions" that are **not recorded in any signed document**. These are treated as unverified (see CQ-004). |
 | **S8** | *Farm_FMS_Database_Gap_Analysis_v0.1.xlsx* (Desktop) | v0.1 first-pass draft | Secondary. |
 | **S9** | `Documentation/Architecture/FarmFMS_Architecture_Decisions_v2.md` | current | Architecture decisions (AD-xx). Not a business source. |
-| **S10** | `Documentation/Database/Database_Conventions.md` | current | Naming, foreign-key and procedure conventions. Not a business source. |
+| **S10** | `Documentation/06_Database/Database_Conventions.md` | current | Naming, foreign-key and procedure conventions. Not a business source. |
 
 ### 1.2 Review limitations
 

@@ -12,16 +12,21 @@ internal sealed class FakeConnectionFactory : IDbConnectionFactory
 {
     public List<FakeDbConnection> Created { get; } = [];
 
+    /// <summary>
+    /// Simulates the Stored Procedure on every created connection (null = commands are not supported).
+    /// </summary>
+    public Func<FakeDbCommand, int>? CommandHandler { get; set; }
+
     public Task<DbConnection> CreateOpenConnectionAsync(CancellationToken cancellationToken = default)
     {
-        var connection = new FakeDbConnection();
+        var connection = new FakeDbConnection { CommandHandler = CommandHandler };
         Created.Add(connection);
         return Task.FromResult<DbConnection>(connection);
     }
 }
 
 /// <summary>
-/// In-memory connection that supports transactions only (no commands).
+/// In-memory connection that supports transactions, and commands when a <see cref="CommandHandler"/> is set.
 /// </summary>
 internal sealed class FakeDbConnection : DbConnection
 {
@@ -54,7 +59,16 @@ internal sealed class FakeDbConnection : DbConnection
         return LastTransaction;
     }
 
-    protected override DbCommand CreateDbCommand() => throw new NotSupportedException("Commands are not supported by the fake.");
+    /// <summary>
+    /// Simulates the Stored Procedure: receives the executed command (with its parameters) and returns the row count.
+    /// </summary>
+    public Func<FakeDbCommand, int>? CommandHandler { get; set; }
+
+    public List<FakeDbCommand> ExecutedCommands { get; } = [];
+
+    protected override DbCommand CreateDbCommand() => CommandHandler is null
+        ? throw new NotSupportedException("Commands are not supported by the fake.")
+        : new FakeDbCommand(this, CommandHandler);
 
     protected override void Dispose(bool disposing)
     {

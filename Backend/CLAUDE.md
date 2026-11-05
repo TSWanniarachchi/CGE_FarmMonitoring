@@ -54,7 +54,7 @@ Never add a reference that points "outward" (e.g. Domain -> Application, Applica
    `Infrastructure/Data/StoredProcedureErrors.cs`. THROW text is never shown to clients.
 7. Do **not** modify the approved database specification. If the spec looks wrong or incomplete, stop and ask.
 
-Full rules: `../Documentation/Database/Database_Conventions.md`. Decisions: `../Documentation/Architecture/FarmFMS_Architecture_Decisions_v2.md`
+Full rules: `../Documentation/06_Database/Database_Conventions.md`. Decisions: `../Documentation/Architecture/FarmFMS_Architecture_Decisions_v2.md`
 (the single authoritative record; `FarmFMS_Architecture_Decisions.md` is superseded).
 
 ## Migrations
@@ -66,20 +66,24 @@ dotnet ef migrations add <Name> --project src/FarmFMS.Infrastructure --startup-p
 dotnet ef database update      --project src/FarmFMS.Infrastructure --startup-project src/FarmFMS.API
 ```
 
-Connection string: `ConnectionStrings:FarmFMS`. Real credentials go in User Secrets (the API has a `UserSecretsId`):
+Connection string: `ConnectionStrings:FarmFMS`. It is **empty in the committed `appsettings.json`** and the API stops at startup until
+it is supplied: User Secrets in Development (the API has a `UserSecretsId`)
 `dotnet user-secrets set "ConnectionStrings:FarmFMS" "<value>" --project src/FarmFMS.API`, or env var `ConnectionStrings__FarmFMS`.
+Never commit credentials: an architecture test rejects SQL credentials and non-empty password / secret / key / token values in `appsettings*.json`.
 
 ## Foundation (Step 02)
 
 | Concern | Type | Location |
 |---|---|---|
 | Result / error model | `Result`, `Result<T>`, `Error`, `ErrorType` | `Application/Common/Results` |
+| Audit base types | `AuditableEntity` (Id + CreatedBy/CreatedDate/ModifiedBy/ModifiedDate per the Module 01 spec), `AuditableDto` | `Domain/Common`, `Application/Common/Dtos` |
+| Input helpers | `StringExtensions` (`TrimToNull`, `CollapseWhitespace`, `ToCode`, `ToEmail`, `ToDigitsOnly`, `ToSearchTerm`, `Mask`), `NullableExtensions.Required()` → validation `Result` | `Application/Common/Extensions` |
 | DB error (translated) | `DataAccessException` | `Application/Common/Exceptions` |
 | Connections | `IDbConnectionFactory` → `SqlConnectionFactory` | `Application/Abstractions/Data`, `Infrastructure/Data` |
 | Transactions | `IUnitOfWork` → `UnitOfWork` (scoped; `ExecuteInTransactionAsync`) | same |
-| Stored Procedures | `IStoredProcedureExecutor` → `StoredProcedureExecutor` | `Infrastructure/Data` |
+| Stored Procedures | `IStoredProcedureExecutor` → `StoredProcedureExecutor`; writes return `@NewId` via `ExecuteForNewIdAsync` and `@RowsAffected` via `ExecuteForRowsAffectedAsync` (AD-09; names in `StoredProcedureOutputParameters`) | `Infrastructure/Data` |
 | Procedure-name rules | `StoredProcedureName` (dbo-qualified, Scr/Sre/Sup/Sde/Sva, PascalCase, ≤ 128 chars SQL Server limit) | `Infrastructure/Data` |
-| SQL error mapping | `SqlErrorTranslator` + business error catalogue `StoredProcedureErrors` | `Infrastructure/Data` |
+| SQL error mapping | `SqlErrorTranslator` + business error catalogue `StoredProcedureErrors`; each entry names its module range `StoredProcedureErrorRange` (Module01 50001–50099, Module02 50100–50199, Module03 50200–50299, SharedAndFuture 50300–50999) | `Infrastructure/Data` |
 | DB object names | `DbObjectNames`, `DbAbbreviations` | `Infrastructure/Persistence/Naming` |
 | Current user | `ICurrentUserService` → `CurrentUserService` | `Application/Abstractions/Identity`, `API/Common/Identity` |
 | Audit actor (CreatedBy) | `IAuditActorService` → `AuditActorService`; `ISystemUserProvider` → `ConfiguredSystemUserProvider` | `Application/Abstractions/Identity`, `Application/Common/Identity`, `Infrastructure/Identity` |
@@ -89,7 +93,7 @@ Connection string: `ConnectionStrings:FarmFMS`. Real credentials go in User Secr
 Repository convention: `Infrastructure/Repositories/<Module>/<Feature>Repository.cs` injects `IStoredProcedureExecutor`
 (never `FarmFmsDbContext`); procedure names are dbo-qualified `const string` fields in a static `<Module>Procedures` class
 (the architecture tests validate them). Services return `Result`/`Result<T>`; controllers inherit `ApiControllerBase`
-and use `OkOrProblem` / `NoContentOrProblem` / `ProblemFrom` — no try/catch.
+and use `OkOrProblem` / `CreatedOrProblem` (201 + `{ id }`) / `NoContentOrProblem` / `ProblemFrom` — no try/catch.
 
 Audit convention: every write service gets `CreatedBy`/`ModifiedBy` from `IAuditActorService.GetActorIdAsync()` and stops on
 failure. Background jobs wrap their work in `using (auditActor.BeginSystemOperation("JobName"))`, which uses the System user.
@@ -116,7 +120,8 @@ dotnet test FarmFMS.sln
 
   `DetectorTests` and the `ViolatingDbContext` model prove that each rule fails on bad input.
 - `tests/FarmFMS.UnitTests` – Result model, procedure-name validation, SQL error translation and business error catalogue,
-  unit of work, executor guard, audit actor / System user, naming helpers, exception handler, current user,
+  unit of work, executor guard, output-parameter contract (fake commands), audit actor / System user, audit base types,
+  string / nullable helpers, naming helpers, exception handler, `ApiControllerBase`, current user,
   options validation at startup, in-memory host (`/health`, ProblemDetails).
 - **Pending:** SQL Server integration tests (live Dapper execution, real `SqlException` translation, procedure scripts).
   They need a SQL Server test database. **Live SQL Server execution has not been verified.**
