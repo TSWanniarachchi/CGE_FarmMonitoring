@@ -1,5 +1,8 @@
 using FarmFMS.Application.Abstractions.Identity;
 using FarmFMS.Application.Common.Identity;
+using FarmFMS.Application.Module01.Authentication;
+using FarmFMS.Application.Module01.Authorization;
+using FarmFMS.Application.Module01.Users;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -23,6 +26,13 @@ public static class DependencyInjection
 
         // Audit: CreatedBy / ModifiedBy = authenticated user, or the System user inside a system operation.
         services.AddScoped<IAuditActorService, AuditActorService>();
+
+        // Module 01 - Step 0 authentication foundation (services are internal; repositories and security are Infrastructure).
+        services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<ISessionValidationService, SessionValidationService>();
+        services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<ICurrentUserProfileService, CurrentUserProfileService>();
+        services.AddScoped<IAdministratorBootstrapService, AdministratorBootstrapService>();
 
         return services;
     }

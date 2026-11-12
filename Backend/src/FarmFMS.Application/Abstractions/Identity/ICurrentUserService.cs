@@ -24,6 +24,12 @@ public interface ICurrentUserService
     int? UserId { get; }
 
     /// <summary>
+    /// The session ID (<c>UserSession.Id</c>, the "sid" claim) behind the access token, or null when the request is
+    /// not authenticated or carries no valid numeric session ID claim.
+    /// </summary>
+    int? SessionId { get; }
+
+    /// <summary>
     /// The signed-in user's name, or null when the request is not authenticated.
     /// </summary>
     string? UserName { get; }

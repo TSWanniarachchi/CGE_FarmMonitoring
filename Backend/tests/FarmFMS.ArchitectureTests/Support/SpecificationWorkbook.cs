@@ -56,6 +56,64 @@ internal static class SpecificationWorkbook
             .ToList();
     }
 
+    /// <summary>
+    /// All rows of <paramref name="sheetName"/> except the header row; each row has one entry per column
+    /// (A, B, C, ...) up to the last used column, empty string for an empty cell.
+    /// </summary>
+    public static IReadOnlyList<IReadOnlyList<string>> Rows(string sheetName)
+    {
+        using var archive = ZipFile.OpenRead(FilePath);
+
+        var sharedStrings = Load(archive, "xl/sharedStrings.xml")?
+            .Root!.Elements(Main + "si")
+            .Select(si => string.Concat(si.Descendants(Main + "t").Select(t => t.Value)))
+            .ToList() ?? [];
+
+        var workbook = Load(archive, "xl/workbook.xml")!;
+        var relationshipId = workbook.Descendants(Main + "sheet")
+            .Single(s => (string?)s.Attribute("name") == sheetName)
+            .Attribute(Relationships + "id")!.Value;
+
+        var target = Load(archive, "xl/_rels/workbook.xml.rels")!
+            .Root!.Elements(PackageRelationships + "Relationship")
+            .Single(r => (string?)r.Attribute("Id") == relationshipId)
+            .Attribute("Target")!.Value.TrimStart('/');
+
+        var sheet = Load(archive, target.StartsWith("xl/", StringComparison.Ordinal) ? target : $"xl/{target}")!;
+
+        var rows = sheet.Descendants(Main + "row").Skip(1)
+            .Select(row => row.Elements(Main + "c")
+                .Select(cell => (Column: ColumnIndex((string?)cell.Attribute("r")), Value: CellValue(cell, sharedStrings)))
+                .ToList())
+            .Where(cells => cells.Count > 0)
+            .ToList();
+
+        var width = rows.Count == 0 ? 0 : rows.Max(cells => cells.Max(c => c.Column)) + 1;
+
+        return rows
+            .Select(cells =>
+            {
+                var values = new string[width];
+                Array.Fill(values, string.Empty);
+                foreach (var (column, value) in cells) values[column] = value;
+                return (IReadOnlyList<string>)values;
+            })
+            .Where(values => values.Any(v => !string.IsNullOrWhiteSpace(v)))
+            .ToList();
+    }
+
+    private static int ColumnIndex(string? reference)
+    {
+        var index = 0;
+        foreach (var ch in reference ?? "A")
+        {
+            if (!char.IsLetter(ch)) break;
+            index = index * 26 + (char.ToUpperInvariant(ch) - 'A' + 1);
+        }
+
+        return index - 1;
+    }
+
     private static string CellValue(XElement cell, IReadOnlyList<string> sharedStrings)
     {
         var type = (string?)cell.Attribute("t");

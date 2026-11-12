@@ -7,7 +7,7 @@
 | Document | Module 01 – Step 0 – Authentication foundation (backend only) |
 | Version | 0.1 |
 | Date | 2026-11-05 |
-| Status | **Draft – Pending Approval** (G0). Only the user changes this status. |
+| Status | **Approved (G0) by the user on 2026-11-12** as the implementation baseline: D-01 to D-31 and C-01 to C-09 accepted as recommended (see §15). |
 | Author | Solution Architect agent |
 | Authorization | User authorized **Step 0 only** on 2026-11-05 (`Documentation/Dev_RoadMap/DEVELOPMENT_ROADMAP.md` §4, §7): "Implement only the authentication backend foundation required for the Login Page, including its necessary APIs, services, Stored Procedures, token handling, session handling, and security requirements. Do not develop the Login Page or any other page." |
 
@@ -426,7 +426,7 @@ Each needs explicit user approval: apply the migration; run the procedure script
 
 | ID | Conflict | Where | Owner |
 |---|---|---|---|
-| C-01 | Task brief asked for "≤ 15 chars" procedure names; AD-08 (Approved) removed that limit (spec *Read Me* still says 15 – AD remaining item 1, DBG-005). This spec follows AD-08 (descriptive names). | AD-08; spec *Read Me* | User / spec owner |
+| C-01 | Task brief asked for "≤ 15 chars" procedure names; AD-08 (Approved) removed that limit (spec *Read Me* still says 15 – AD remaining item 1, DBG-005). This spec follows AD-08 (descriptive names). **Resolved 2026-11-12:** the user confirmed approved AD-08 governs; the "≤ 15 chars" brief is withdrawn. Only the workbook *Read Me* text remains for the spec owner. | AD-08; spec *Read Me* | Spec owner (workbook text only) |
 | C-02 | `Business_Clarification_Register.md` CQ-036 still says "implementation blocked", and `Functional_Requirements_Analysis.md` §"Security" says "Do not implement password reversibility", while design §11.1 records the user's login-path approval. | CQ-036; FRA | Business analyst to update the register |
 | C-03 | FR-UM numbering differs between SRS (FR-UM-001…010) and FRD (FR-UM-001…022); e.g. FR-UM-008 means different things. | SRS §3.1; FRD | Business analyst |
 | C-04 | Spec says "Union of **Allow** permissions" but `RoleMenuAccess` has no Allow/Deny column. Assumed: row present = Allow (D-11). | Spec *Stored Procedures* (SvaUsrPerm) | Spec owner |
@@ -454,3 +454,36 @@ Each needs explicit user approval: apply the migration; run the procedure script
 | AD-16, design §9 | – | all auth | log-capture tests; AC-16 |
 | B-03 rate limiting | – | login, refresh, logout | AC-17 |
 | Logout (spec Login history) | N4, SupUserSessRev, ScrLoginHist | POST api/auth/logout | logout tests; AC-08 |
+
+---
+
+## 15. G0 approval record (2026-11-12)
+
+The user approved this specification and all recommendations D-01 to D-31 and C-01 to C-09 as the implementation baseline, with these explicit statements:
+
+| Item | User decision |
+|---|---|
+| D-09 | Access token lifetime **10 minutes**; absolute session lifetime **12 hours**. |
+| Idle timeout | The **30-minute server-side idle timeout** (spec *Confirmed Decisions*) is preserved and enforced independently of the token and absolute lifetimes. |
+| D-07 | Refresh token rotation with reuse detection accepted. |
+| D-19 | The dedicated **SYSTEM** user is retained (resolved through `dbo.SreAppUsrSystemId`). |
+| C-01 | Procedure naming follows **approved AD-08** (descriptive names, no 15-character limit); outdated documentation is corrected. The workbook *Read Me* text remains the specification owner's item (AD v2 remaining item 1); the workbook is not modified. |
+| D-20 / C-09 | The approved Farm Monitoring **Process** requirement (`UserAccount.ProcessId NOT NULL`) is preserved. The first Administrator is created by a **secure, Development-only bootstrap**; the ProcessId is supplied by the operator at run time – no ProcessId is hard-coded, and no credential is committed. |
+| Password storage | Reversible **AES-256-GCM** password storage, Admin password reveal (`dbo.SreUsrPwdView`) and Admin password reset are preserved as requirements (implemented in Step 13, not in Step 0). |
+
+**Not authorized by this approval:** applying the migration, executing SQL / procedure scripts, running the bootstrap seed or changing any database. Each needs separate user approval. Genuine external security approvals (P-08 production key custody, P-13, P-14 restricted SQL principal, P-06 password set/change procedure policy, P-22 alert routing) remain **pending**; Step 0 is Development-only (D-31).
+
+### 15.1 Implementation additions (technical decisions within the approved scope, 2026-11-12)
+
+| Item | Addition | Reason |
+|---|---|---|
+| §5.3 `ScrAppUser` | Optional `@IsActive BIT = 1` | D-19: the SYSTEM user is created inactive; no Step 0 procedure can deactivate a user. |
+| §5.4 catalogue | **50005** `User.UsernameTaken` (Conflict, "The username is already in use.") – `ScrAppUser`; **50006** `UserAccount.AlreadyExists` (Conflict, "The user already has an account.") – `ScrUserAccount` | §5.3 requires THROW on duplicate username / second account; numbers inside the reserved Step 0 block 50001–50019. |
+| Procedure guards | `THROW 50000` for caller errors (non-positive lifetimes/thresholds/ProcessId, invalid idle/touch/platform parameters) | Fail closed on programming errors. |
+| N6 `SvaUsrSess` | The activity touch updates `LastActDate` only (no `ModifiedBy/ModifiedDate`) | Same rationale as N2/N3 (§5.2 note). |
+| N8 `SreAppUsrSystemId` | Resolves only an **inactive** `SYSTEM` row | D-19 invariant: an active account must never become the audit actor. |
+| §6.1 `IPasswordProtector` | `CreatePlaceholder()` (random payload of the correct sizes) | Bootstrap placeholder before the AppUser Id exists (P-03 Option A), without CSPRNG code in Application. |
+| §6.4 `ClientContext` | Public (not internal) | Parameter of a public service interface. |
+| Session validation | Not performed on `[AllowAnonymous]` endpoints (refresh/logout/login/health) | Code review M-1: a bearer header on refresh must not extend the idle window (AC-10). |
+| Login | System actor resolved before credential evaluation; unavailable → generic 500 for every outcome | Code review M-2: no password oracle without lockout. |
+| Lockout | Concurrent wrong-password requests can exceed 5 guesses by the degree of concurrency (bounded by the per-IP rate limit) | Accepted residual risk (code review L-7). |

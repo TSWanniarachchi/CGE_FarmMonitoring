@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using FarmFMS.API.Common.Errors;
+using FarmFMS.API.Commands;
 using FarmFMS.API.Common.Identity;
+using FarmFMS.API.Common.Security;
 using FarmFMS.Application.Abstractions.Identity;
 using Microsoft.AspNetCore.HttpLogging;
 
@@ -19,8 +21,19 @@ public static class DependencyInjection
         // Endpoints: controllers, the built-in OpenAPI document (mapped in Development only) and health checks.
         // The readiness checks themselves are registered by AddInfrastructure().
         services.AddControllers();
-        services.AddOpenApi();
+        services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
         services.AddHealthChecks();
+
+        // Security (Step 0): JWT bearer + per-request session validation, permission authorization mechanism,
+        // login / refresh rate limiting and trusted forwarded headers. Controllers require authentication by default
+        // (Program.cs: MapControllers().RequireAuthorization()).
+        services.AddApiSecurity();
+        services.AddApiRateLimiting();
+        services.AddApiForwardedHeaders();
+
+        // Development-only console commands (never run at normal startup).
+        services.AddTransient<IBootstrapConsole, SystemBootstrapConsole>();
+        services.AddTransient<BootstrapAdminCommand>();
 
         // Current user (audit fields)
         services.AddHttpContextAccessor();

@@ -64,9 +64,10 @@ dotnet test  Backend/FarmFMS.sln -c Release --no-build
 
 Gates G0–G8 are defined in the `farmfms-quality-gates` skill. A gate passes only with real command output.
 
-## Current status (05-11-2026)
+## Current status (12-11-2026)
 
 - Step 02 / 02.1 backend foundation implemented; Step 02 final approval pending (AD v2, remaining items).
-- **Module 01 is not authorized.** Approved sequence: authentication (Step 04) **before** any admin API. No unauthenticated admin endpoints.
+- Module 01 is authorized **step by step** per `Documentation/Dev_RoadMap/DEVELOPMENT_ROADMAP.md`. Step 0 (authentication foundation,
+  G0 approved 2026-11-12) is implemented and Ready for Testing; the Login Page and later steps are **not** started. No unauthenticated admin endpoints.
 - Frontend feature work waits for frontend foundation (Step 03) approval.
 - **Known unresolved security issue:** a SQL credential is in public Git history (commits `5ffe3f2`..`f4b75fe`). It is not resolved; do not claim otherwise.

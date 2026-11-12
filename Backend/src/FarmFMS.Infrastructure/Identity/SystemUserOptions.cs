@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using FarmFMS.Application.Module01.Users;
+using FarmFMS.Domain.Module01;
 
 /*
  * Description  : Defines the validated System user settings bound from the "SystemUser" configuration section.
@@ -8,16 +10,18 @@ using System.ComponentModel.DataAnnotations;
 namespace FarmFMS.Infrastructure.Identity;
 
 /// <summary>
-/// System user settings. <see cref="UserId"/> is the <c>AppUser.Id</c> (INT IDENTITY per the Module 01
-/// specification) of the dedicated System user record created by the controlled seed / deployment process.
-/// Because the ID is assigned by IDENTITY at seed time, it is set per environment (environment variable
-/// <c>SystemUser__UserId</c> or user-secrets) and is never hard-coded or committed.
-/// When it is not set, system operations fail closed; request writes by authenticated users are unaffected.
+/// System user settings. The dedicated System user is an <c>AppUser</c> row (inactive, never able to sign in) whose
+/// <b>Id is resolved from the database</b> by <see cref="Username"/> through <c>dbo.SreAppUsrSystemId</c>
+/// (AD-14, Step 0 spec D-19). The Id is never hard-coded and never configured (the former <c>SystemUser:UserId</c>
+/// bridge was replaced). Until the SYSTEM record exists (bootstrap), system operations fail closed; request writes by
+/// authenticated users are unaffected.
 /// </summary>
-public sealed class SystemUserOptions
+public sealed class SystemUserOptions : ISystemUserSettings
 {
     public const string SectionName = "SystemUser";
 
-    [Range(1, int.MaxValue, ErrorMessage = "SystemUser:UserId must be a positive AppUser ID.")]
-    public int? UserId { get; set; }
+    /// <summary>Username of the System user record (default <c>SYSTEM</c>).</summary>
+    [Required(AllowEmptyStrings = false, ErrorMessage = "SystemUser:Username is required.")]
+    [StringLength(Module01FieldLengths.Username, ErrorMessage = "SystemUser:Username must not exceed {1} characters.")]
+    public string Username { get; set; } = "SYSTEM";
 }

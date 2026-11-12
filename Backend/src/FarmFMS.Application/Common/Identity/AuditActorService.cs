@@ -43,7 +43,7 @@ internal sealed class AuditActorService : IAuditActorService
             if (systemUserId is > 0)
                 return systemUserId.Value;
 
-            _logger.LogError("A system operation needs the System user ID, but it is not configured (SystemUser:UserId)");
+            _logger.LogError("A system operation needs the System user ID, but the System user could not be resolved (SystemUser:Username, dbo.SreAppUsrSystemId)");
             return AuditErrors.SystemUserNotConfigured;
         }
 
@@ -58,7 +58,7 @@ internal sealed class AuditActorService : IAuditActorService
         ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
 
         Interlocked.Increment(ref _systemOperationDepth);
-        _logger.LogInformation("System operation {OperationName} started", operationName);
+        _logger.LogDebug("System operation {OperationName} started", operationName);
 
         return new SystemOperationScope(this, operationName);
     }
@@ -66,7 +66,7 @@ internal sealed class AuditActorService : IAuditActorService
     private void EndSystemOperation(string operationName)
     {
         Interlocked.Decrement(ref _systemOperationDepth);
-        _logger.LogInformation("System operation {OperationName} ended", operationName);
+        _logger.LogDebug("System operation {OperationName} ended", operationName);
     }
 
     private sealed class SystemOperationScope(AuditActorService owner, string operationName) : IDisposable

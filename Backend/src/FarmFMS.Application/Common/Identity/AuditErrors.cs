@@ -17,7 +17,7 @@ public static class AuditErrors
         "You must be signed in to perform this operation.");
 
     /// <summary>
-    /// A system operation ran, but the System user ID is not configured for this environment.
+    /// A system operation ran, but the System user could not be resolved (the SYSTEM record is missing or the lookup failed).
     /// </summary>
     public static readonly Error SystemUserNotConfigured = Error.Failure(
         "Audit.SystemUserNotConfigured",

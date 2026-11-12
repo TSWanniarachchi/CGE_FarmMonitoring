@@ -47,7 +47,7 @@ Do not develop multiple pages in parallel or move ahead while the current featur
 
 | Step | Page / Feature | Main testing focus | Status |
 |---:|---|---|---|
-| 0 | Authentication foundation | Login API, token generation/refresh, session handling, idle timeout, logout, lockout, authorization policies | In Progress |
+| 0 | Authentication foundation | Login API, token generation/refresh, session handling, idle timeout, logout, lockout, authorization policies | Ready for Testing |
 | 1 | Login Page | Input validation, invalid credentials, lockout behaviour, successful login, session handling | Not Started |
 | 2 | Dashboard / Landing Page | Role-based landing experience and access restrictions | Not Started |
 | 3 | User List | Search, filters, paging, sorting, authorized data visibility | Not Started |
@@ -67,7 +67,7 @@ Do not develop multiple pages in parallel or move ahead while the current featur
 ### Module 01 progress
 
 - Completed pages: **0 / 15**
-- Authentication foundation: **In Progress** (specification stage, awaiting G0 approval)
+- Authentication foundation: **Ready for Testing** (implemented and automatically verified; awaiting the user's manual testing and approval. Migration, procedure scripts and the bootstrap are **not** applied – each needs separate user approval.)
 - Current feature: **Authentication foundation**
 - Next feature: **Login Page**, after the foundation is complete and verified.
 
@@ -134,3 +134,6 @@ Use this instruction when starting development:
 | — | Module 01 | Roadmap prepared | Not Started | Implementation has not yet been recorded as started. |
 | 2026-11-05 | Module 01 | Step 0 – Authentication foundation | In Progress | User authorized Step 0. Login-path password encryption items approved (Password_Encryption_Design.md §11.1). Specification first (G0) before database/backend work. |
 | 2026-11-05 | Module 01 | Step 0 – Authentication foundation | In Progress | Draft spec written: `Documentation/Specs/Module01/Step00_Authentication_Foundation_Spec.md` (D-01..D-31, C-01..C-09). Awaiting user G0 approval and decisions. Baseline gates: build 0 warnings, unit 228/228, architecture 138/138. |
+| 2026-11-12 | Module 01 | Step 0 – Authentication foundation | In Progress | G0 approved by the user (D-01..D-31, C-01..C-09; spec §15). Implementation started. |
+| 2026-11-12 | Module 01 | Step 0 – Authentication foundation | Ready for Testing | Implemented: 9 tables (migration `Module01AuthenticationFoundation`, not applied), 15 Stored Procedure scripts (not executed), login/refresh/logout/me API, JWT + rotating refresh tokens with reuse detection, 30-min server-side idle timeout, 12-h absolute lifetime, lockout, AES-256-GCM verification, permission-policy mechanism, rate limiting, Development-only `bootstrap-admin`. Independent review: no Critical/High; 3 Medium + Lows fixed. Gates: build 0 warnings, unit 566/566, architecture 269/269. G7 integration Blocked (no test database). Awaiting user manual testing. |
+| 2026-11-12 | Module 01 | Step 0 – Authentication foundation | Ready for Testing | Development database deployed with user approval (FORGE4 / CGE_FarmMonitoring, SQL Server 2016 SP2, compat 130, CI collation): migration `20261112032904_Module01AuthenticationFoundation` applied; 15/15 procedure scripts executed. Verified: 9 tables, 101 columns match the approved workbook, 9 PK + 9 UQ + 3 IX + 12 DF + 2 CK named per §4.2, 0 foreign keys, 0 non-dbo objects, 15 procedures, read-only procedure smoke calls OK. No data seeded; SYSTEM / first Administrator bootstrap **not run** (awaiting separate approval). |

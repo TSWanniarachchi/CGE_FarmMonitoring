@@ -63,4 +63,31 @@ public class CurrentUserServiceTests
         Assert.False(service.IsAuthenticated);
         Assert.Null(service.UserId);
     }
+
+    [Fact]
+    public void Reads_session_id_and_name_from_the_JWT_claims()
+    {
+        var service = Create(Authenticated(new Claim("sub", "42"), new Claim("sid", "900"), new Claim("name", "jsmith")));
+
+        Assert.Equal(900, service.SessionId);
+        Assert.Equal("jsmith", service.UserName);
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("0")]
+    [InlineData("-5")]
+    [InlineData("")]
+    public void Invalid_session_id_is_null(string value)
+    {
+        Assert.Null(Create(Authenticated(new Claim("sub", "1"), new Claim("sid", value))).SessionId);
+    }
+
+    [Fact]
+    public void Missing_or_anonymous_session_id_is_null()
+    {
+        Assert.Null(Create(Authenticated(new Claim("sub", "1"))).SessionId);
+        Assert.Null(Create(new ClaimsPrincipal(new ClaimsIdentity())).SessionId);
+        Assert.Null(Create(null).SessionId);
+    }
 }

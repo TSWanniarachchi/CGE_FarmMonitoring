@@ -53,13 +53,25 @@ public static class StoredProcedureErrors
     /// Add entries here, grouped by module, only when the raising Stored Procedure is approved. Each entry names its
     /// module range (<see cref="StoredProcedureErrorRange"/>), e.g.
     /// <c>new(StoredProcedureErrorRange.Module01, 50001, Error.Conflict("User.UsernameTaken", "..."))</c>.
-    /// No business error numbers are registered yet (no Stored Procedures exist).
+    /// Module 01 Step 0 (authentication foundation) uses the reserved block 50001-50019
+    /// (Step00_Authentication_Foundation_Spec section 5.4, D-28).
     /// </para>
     /// </summary>
     public static IReadOnlyDictionary<int, Error> Catalog { get; } = Build(
     [
-        // Module 01 – Security & Access Management (50001-50099)
-        // (none yet)
+        // Module 01 – Security & Access Management (50001-50099); Step 0 block 50001-50019
+        new(StoredProcedureErrorRange.Module01, 50001,
+            Error.Unauthorized("Auth.SessionInvalid", "Your session is no longer valid. Please sign in again.")),
+        new(StoredProcedureErrorRange.Module01, 50002,
+            Error.Unauthorized("Auth.UserNotActive", "Invalid username or password.")),
+        new(StoredProcedureErrorRange.Module01, 50003,
+            Error.Validation("LoginHistory.EventTypeInvalid", "The login event type is not valid.")),
+        new(StoredProcedureErrorRange.Module01, 50004,
+            Error.NotFound("User.NotFound", "The user was not found.")),
+        new(StoredProcedureErrorRange.Module01, 50005,
+            Error.Conflict("User.UsernameTaken", "The username is already in use.")),
+        new(StoredProcedureErrorRange.Module01, 50006,
+            Error.Conflict("UserAccount.AlreadyExists", "The user already has an account."))
     ]);
 
     /// <summary>

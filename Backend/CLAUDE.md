@@ -8,7 +8,8 @@ This solution (`FarmFMS.sln`) is fully independent of the Frontend. Never refere
 > (Persistence configurations / migrations, `Database/` scripts, error catalogue, procedure constants) and
 > `backend-developer` (everything else in `src/`), verified by `qa-engineer` and `code-reviewer`. Use the skills
 > `farmfms-backend-slice` and `farmfms-stored-procedure`. Gates: `python .claude/skills/farmfms-quality-gates/run_gates.py` from the
-> repository root (Release). **Module 01 is not authorized yet**; authentication (Step 04) comes before any admin API.
+> repository root (Release). Module 01 is authorized step by step (`Documentation/Dev_RoadMap/DEVELOPMENT_ROADMAP.md`);
+> Step 0 (authentication foundation) comes before any admin API. No unauthenticated admin endpoints.
 
 ## Build / run
 
@@ -94,9 +95,9 @@ Never commit credentials: an architecture test rejects SQL credentials and non-e
 | SQL error mapping | `SqlErrorTranslator` + business error catalogue `StoredProcedureErrors`; each entry names its module range `StoredProcedureErrorRange` (Module01 50001–50099, Module02 50100–50199, Module03 50200–50299, SharedAndFuture 50300–50999) | `Infrastructure/Data` |
 | DB object names | `DbObjectNames`, `DbAbbreviations` | `Infrastructure/Persistence/Naming` |
 | Current user | `ICurrentUserService` → `CurrentUserService` | `Application/Abstractions/Identity`, `API/Common/Identity` |
-| Audit actor (CreatedBy) | `IAuditActorService` → `AuditActorService`; `ISystemUserProvider` → `ConfiguredSystemUserProvider` | `Application/Abstractions/Identity`, `Application/Common/Identity`, `Infrastructure/Identity` |
+| Audit actor (CreatedBy) | `IAuditActorService` → `AuditActorService`; `ISystemUserProvider` → `DatabaseSystemUserProvider` (`dbo.SreAppUsrSystemId`, cached) | `Application/Abstractions/Identity`, `Application/Common/Identity`, `Infrastructure/Identity` |
 | Errors → HTTP | `GlobalExceptionHandler`, `ErrorStatusCodes`, `ApiControllerBase` | `API/Common/Errors`, `API/Controllers` |
-| Options | `DatabaseOptions` (`Database`), `SystemUserOptions` (`SystemUser`), validated on start | `Infrastructure/Data`, `Infrastructure/Identity` |
+| Options | `DatabaseOptions` (`Database`), `SystemUserOptions` (`SystemUser:Username`), `JwtOptions` (`Jwt`), `PasswordEncryptionOptions` (`PasswordEncryption`), `SessionOptions` (`Session`), `RateLimitingOptions` (`RateLimiting`), `ForwardedHeaders:KnownProxies` – all validated on start | `Infrastructure/Data`, `Infrastructure/Identity`, `Infrastructure/Security`, `API/Common/Security` |
 
 Repository convention: `Infrastructure/Repositories/<Module>/<Feature>Repository.cs` injects `IStoredProcedureExecutor`
 (never `FarmFmsDbContext`); procedure names are dbo-qualified `const string` fields in a static `<Module>Procedures` class
@@ -105,8 +106,8 @@ and use `OkOrProblem` / `CreatedOrProblem` (201 + `{ id }`) / `NoContentOrProble
 
 Audit convention: every write service gets `CreatedBy`/`ModifiedBy` from `IAuditActorService.GetActorIdAsync()` and stops on
 failure. Background jobs wrap their work in `using (auditActor.BeginSystemOperation("JobName"))`, which uses the System user.
-`SystemUser:UserId` (the seeded System `AppUser.Id`) is set per environment (env var `SystemUser__UserId` or user-secrets),
-never in committed files; without it, system operations fail closed.
+The System user is the `AppUser` named by `SystemUser:Username` (`SYSTEM`, inactive, can never log in, D-19); its Id is
+resolved through `dbo.SreAppUsrSystemId` and cached after the first hit. Without that row, system operations fail closed.
 
 ## Tests
 
@@ -143,7 +144,28 @@ dotnet test FarmFMS.sln
 - Logging: built-in `ILogger<T>` with message templates (approved: no Serilog at this stage). Never log passwords, keys, tokens, connection strings, parameter values or request bodies. HTTP logging records method, path, status and duration only.
 - Packages: keep EF Core packages at the same version; `System.Security.Cryptography.Pkcs` is pinned in Infrastructure to patch a vulnerable transitive version from `Microsoft.Data.SqlClient`.
 
+## Authentication (Module 01 Step 0)
+
+Spec: `../Documentation/Specs/Module01/Step00_Authentication_Foundation_Spec.md` (G0 approved 2026-11-12). Development only (D-31).
+
+- Endpoints (`Controllers/Module01/AuthController`): `POST api/auth/login`, `POST api/auth/refresh`, `POST api/auth/logout`
+  (anonymous, rate-limited), `GET api/auth/me`. Every other controller endpoint requires authentication
+  (`MapControllers().RequireAuthorization()`); JWT validation is followed by per-request session validation (`dbo.SvaUsrSess`):
+  revocation, 30-min idle timeout, 12-h absolute lifetime, user state and web access.
+- Tokens: JWT HS256 (10 min); opaque refresh token, only its SHA-256 hash is stored, rotated on every refresh, reuse revokes all sessions.
+- Passwords: AES-256-GCM (`Infrastructure/Security/AesGcmPasswordProtector`), key ring from configuration.
+- Permission policies: `PermissionRequirement` + `Policies.Permission(menu, permission)`; none registered yet (no Menu/Permission data).
+- **Secrets required at startup** (user-secrets in Development, never committed): `ConnectionStrings:FarmFMS`,
+  `Jwt:SigningKey` (base64, ≥ 32 bytes), `PasswordEncryption:ActiveKeyVersion` (`^[A-Za-z0-9-]{1,50}$`) and
+  `PasswordEncryption:Keys:<version>` (base64, exactly 32 bytes). The API refuses to start without valid values.
+- First Administrator (Development only, a database change – run only with explicit approval):
+  `dotnet run --project src/FarmFMS.API -- bootstrap-admin`. Interactive; creates the SYSTEM user if missing, the Administrator
+  and its `UserAccount` (ProcessId typed by the operator; never hard-coded). The password is entered masked, never logged.
+- Migration `Module01AuthenticationFoundation` (9 tables) and 15 procedure scripts in `../Database/StoredProcedures/Module01/`:
+  apply only with explicit user approval (order in `../Database/README.md`). Migrations go to `Persistence/Migrations`
+  (`--output-dir Persistence/Migrations`); `DesignTimeDbContextFactory` lets `migrations add` run without a connection string.
+
 ## Current status
 
-Step 02 (backend foundation) complete, including the Step 02 review decisions (AD-04, AD-08, AD-09, AD-14, AD-16, AD-24).
-No tables, migrations, Stored Procedures, authentication or business modules exist yet.
+Step 02 (backend foundation) complete. Module 01 Step 0 (authentication foundation) implemented and Ready for Testing
+(see the roadmap). Migration and procedure scripts applied to the Development database (FORGE4, SQL Server 2016 SP2 – avoid 2017+ T-SQL such as STRING_AGG/TRIM); bootstrap not run. Automated integration tests still blocked (no test database, AD-23).

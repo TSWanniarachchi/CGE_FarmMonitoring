@@ -11,6 +11,7 @@ public class AuditActorServiceTests
     {
         public bool IsAuthenticated { get; } = isAuthenticated;
         public int? UserId { get; } = userId;
+        public int? SessionId => null;
         public string? UserName => IsAuthenticated ? "user" : null;
     }
 
@@ -90,6 +91,18 @@ public class AuditActorServiceTests
 
         outer.Dispose();
         Assert.True((await service.GetActorIdAsync()).IsFailure);
+    }
+
+    [Fact]
+    public void System_operation_start_and_end_are_logged_at_Debug_only()
+    {
+        var logger = new FarmFMS.UnitTests.Module01.Fakes.ListLogger<AuditActorService>();
+        var service = new AuditActorService(new StubCurrentUser(false, null), new StubSystemUser(7), logger);
+
+        service.BeginSystemOperation("Login").Dispose();
+
+        Assert.Equal(2, logger.Entries.Count);
+        Assert.All(logger.Entries, e => Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Debug, e.Level));
     }
 
     [Fact]
